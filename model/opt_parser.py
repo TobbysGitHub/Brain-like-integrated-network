@@ -31,10 +31,10 @@ def parse_opt():
     parser.add_argument('--dim_attention_unit', default=8,
                         help='the dim of attention of query and key in each unit')
 
-    parser.add_argument('--memory_capacity', default=64,
+    parser.add_argument('--memory_capacity', default=512,
                         help='the negative samples in each unit')
 
-    parser.add_argument('--attention_mask_p', default=0.382,
+    parser.add_argument('--attention_mask_p', default=0.5,
                         help='random mask some memory to avoid over-fitting')
 
     parser.add_argument('--max_bptt_mem', default=200,

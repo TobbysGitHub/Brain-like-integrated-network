@@ -18,7 +18,7 @@ class CortexLayer(nn.Module):
 
         self.enc_layer = EncodeLayer(num_units, dim_inputs_forward, opt)
         self.agg_layer = AggregateLayer(num_units, self.dim_outputs, dim_inputs_backward, opt)
-        self.mem_layer = MemoryLayer(num_units, opt)
+        self.mem_layer = UnitWiseMemory(num_units, opt)
         self.loss_layer = ContrastiveLossLayer(num_units)
 
         self.a_q = LoopQueue(opt.t_introlayer)
