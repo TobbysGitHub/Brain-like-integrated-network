@@ -7,7 +7,7 @@ from model.sub_layers.modules.random_mask import RandomMask
 from model.sub_layers.modules.state_module import StatefulModule
 
 
-class MemoryLayer(StatefulModule):
+class MemoryLayer(nn.Module):
     # noinspection PyArgumentList
     def __init__(self, n_units, opt):
         super().__init__()
@@ -16,7 +16,7 @@ class MemoryLayer(StatefulModule):
         self.d_key, self.d_value = opt.dim_attention_unit, opt.dim_outputs_unit
 
         self.fresh_counter = 0
-        self.max_bptt = opt.max_bptt_mem
+        # self.max_bptt = opt.max_bptt_mem
         self.mem_refresh_rate = lambda: opt.memory_fresh_rate
         self.reward_gamma = lambda: opt.reward_gamma
         self.reward_refresh_rate = lambda: opt.reward_fresh_rate
@@ -30,8 +30,8 @@ class MemoryLayer(StatefulModule):
                                       requires_grad=False)
         self.key_mem = nn.Parameter(torch.empty(n_units, self.capacity, self.d_key),
                                     requires_grad=False)
-        self.value_mem = self.register_state('value_mem',
-                                             torch.empty(self.n_units, self.capacity, self.d_value))
+        self.value_mem = nn.Parameter(torch.empty(self.n_units, self.capacity, self.d_value),
+                                      requires_grad=False)
         self.reward_mem = nn.Parameter(torch.ones(n_units, self.capacity),
                                        requires_grad=False)
         self.reward_weights = None
@@ -71,8 +71,8 @@ class MemoryLayer(StatefulModule):
 
         begin = self.capacity - num_empty
 
-        self.key_mem.data[:, begin:begin + num] = key_batch
-        self.value_mem.data[:, begin:begin + num] = value_batch
+        self.key_mem[:, begin:begin + num] = key_batch
+        self.value_mem[:, begin:begin + num] = value_batch
         self.num_empty -= num
         return True
 
@@ -109,13 +109,12 @@ class MemoryLayer(StatefulModule):
             # n_units * n_capacity * d_key
             self.key_mem *= retain_ratio.unsqueeze(-1)
             self.key_mem += (fresh_ratio.unsqueeze(-1) * key_new.unsqueeze(-2)).sum(0)
-
-        self.value_mem *= retain_ratio.unsqueeze(-1)
-        self.value_mem += (fresh_ratio.unsqueeze(-1) * value_new.unsqueeze(-2)).sum(0)
-
+            self.value_mem *= retain_ratio.unsqueeze(-1)
+            self.value_mem += (fresh_ratio.unsqueeze(-1) * value_new.unsqueeze(-2)).sum(0)
         self.fresh_counter += 1
-        if self.fresh_counter % self.max_bptt == 0:
-            self.value_mem.detach_()
+
+        # if self.fresh_counter % self.max_bptt == 0:
+        #     self.value_mem.detach_()
 
     def _refresh_reward(self, weights, reward):
         with torch.no_grad():
