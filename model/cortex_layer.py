@@ -14,11 +14,18 @@ class CortexLayer(nn.Module):
                  opt):
         super().__init__()
 
+        self.num_units = num_units
+        self.dim_inputs_forward = dim_inputs_forward
+        self.dim_inputs_backward = dim_inputs_backward
+        self.dim_outputs_unit = opt.dim_outputs_unit
         self.dim_outputs = num_units * opt.dim_outputs_unit
+
+        self.t_interlayer = opt.t_interlayer
+        self.t_introlayer = opt.t_introlayer
 
         self.enc_layer = EncodeLayer(num_units, dim_inputs_forward, opt)
         self.agg_layer = AggregateLayer(num_units, self.dim_outputs, dim_inputs_backward, opt)
-        self.mem_layer = UnitWiseMemory(num_units, opt)
+        self.att_layer = AttentionLayer(num_units, opt)
         self.loss_layer = ContrastiveLossLayer(num_units)
 
         self.a_q = LoopQueue(opt.t_introlayer)
@@ -36,8 +43,8 @@ class CortexLayer(nn.Module):
         agg_outputs = self.agg_layer(enc_outputs, self.i_q.peek())
         agg_outputs = self.a_q.offer(agg_outputs)
 
-        negative_samples, weights, att_outputs, refresh_handler = \
-            self.mem_layer(attention, enc_outputs)
+        att_outputs, negative_samples, weights, rewards, refresh_handler = \
+            self.att_layer(attention, enc_outputs)
 
         if cal_loss:
             loss = self.loss_layer(enc_outputs, agg_outputs, negative_samples, weights)
@@ -45,10 +52,19 @@ class CortexLayer(nn.Module):
             loss = None
 
         agg_outputs_preview = self.a_q.peek()
-        return enc_outputs, agg_outputs_preview, att_outputs, refresh_handler, loss
+        return enc_outputs, att_outputs, rewards, agg_outputs_preview, refresh_handler, loss
 
     def backward(self, inputs_backward):
         self.i_q.offer(inputs_backward)
+
+    def extra_repr(self) -> str:
+        return 'num_units:{num_units}, ' \
+               'dim_inputs_forward:{dim_inputs_forward}, ' \
+               'dim_inputs_backward:{dim_inputs_backward}, ' \
+               'dim_outputs_unit:{dim_outputs_unit}, ' \
+               'dim_outputs:{dim_outputs}, ' \
+               't_introlayer:{t_introlayer}, ' \
+               't_interlayer:{t_interlayer}'.format(**self.__dict__)
 
 
 def main():

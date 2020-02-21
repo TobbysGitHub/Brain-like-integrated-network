@@ -85,6 +85,16 @@ class UnitWiseMemory(nn.Module):
     def new_episode(self):
         self.reward_decay_weights = None
 
+    def extra_repr(self) -> str:
+        return 'n_units:{n_units}, ' \
+               'capacity:{capacity}, ' \
+               'd_key:{d_key}, ' \
+               'd_value:{d_value}, '.format(**self.__dict__) + \
+               'mem_refresh_rate:{}, ' \
+               'reward_gamma:{}, ' \
+               'reward_refresh_rate:{}'.format(
+                   self.mem_refresh_rate(), self.reward_gamma(), self.reward_refresh_rate())
+
 
 def main():
     opt = opt_parser.parse_opt()
