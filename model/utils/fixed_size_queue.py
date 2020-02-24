@@ -1,4 +1,4 @@
-class LoopQueue:
+class FixedSizeQueue:
     def __init__(self, capacity):
         self.capacity = capacity
         self.queue = [None] * self.capacity
@@ -22,7 +22,7 @@ class LoopQueue:
 
 
 def main():
-    l = LoopQueue(4)
+    l = FixedSizeQueue(4)
     print(l.peek())
 
     for i in range(5):

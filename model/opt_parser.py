@@ -7,7 +7,7 @@ def parse_opt():
     parser.add_argument('--batch_size', default=32,
                         help='size of batch')
 
-    parser.add_argument('--dim_outputs_unit', default=8,
+    parser.add_argument('--dim_unit', default=8,
                         help='dim of the output of each unit')
 
     parser.add_argument('--dim_hid_enc_unit', default=32,
@@ -16,7 +16,7 @@ def parse_opt():
     parser.add_argument('--dim_hid_agg_unit', default=21,
                         help='number of hidden nodes inside each unit`s aggregate network')
 
-    parser.add_argument('--max_bptt_agg', default=20,
+    parser.add_argument('--max_bptt', default=20,
                         help='the max steps of back-propagation-through-time in GRU of the aggregate network')
 
     parser.add_argument('--t_introlayer', default=4,
