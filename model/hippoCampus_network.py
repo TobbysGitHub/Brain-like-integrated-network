@@ -2,9 +2,9 @@ from torch import nn
 
 
 class HippoCampusNetwork(nn.Module):
-    def __init__(self, num_units, dim_inputs, dim_attention_global, dim_attention_unit):
+    def __init__(self, num_units_layer, dim_inputs, dim_attention_global, dim_attention_unit):
         super().__init__()
-        self.num_units = num_units
+        self.num_units = sum(num_units_layer)
         self.dim_inputs = dim_inputs
         self.dim_attention_global = dim_attention_global
         self.dim_attention_unit = dim_attention_unit
