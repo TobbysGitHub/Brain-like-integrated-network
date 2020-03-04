@@ -4,17 +4,17 @@ from torch import nn
 
 class UnitWiseLinear(nn.Module):
 
-    def __init__(self, n_units, in_features, out_features, bias=True, init=True):
+    def __init__(self, num_units, in_features, out_features, bias=True, init=True):
         super().__init__()
-        self.n_units = n_units
+        self.num_units = num_units
         self.in_features = in_features
         self.out_features = out_features
 
-        self.w = nn.Parameter(torch.rand(n_units, out_features, in_features))
+        self.w = nn.Parameter(torch.rand(num_units, out_features, in_features))
         self.bias = bias
         self.init = init
         if bias:
-            self.b = nn.Parameter(torch.zeros(n_units, out_features))
+            self.b = nn.Parameter(torch.zeros(num_units, out_features))
 
         if init:
             nn.init.xavier_normal_(self.w)
@@ -32,17 +32,21 @@ class UnitWiseLinear(nn.Module):
         return x
 
     def extra_repr(self) -> str:
-        return 'n_units={n_units}, in_features={in_features}, ' \
+        return 'num_units={num_units}, in_features={in_features}, ' \
                'out_features={out_features}, bias={bias}'.format(**self.__dict__)
 
 
+def main():
+    num_units = 4
+    in_features = 5
+    out_features = 6
+    ul = UnitWiseLinear(num_units, in_features, out_features)
+
+    x = torch.rand(16, num_units, in_features)
+    y = ul(x)
+
+    assert y.shape == (16, num_units, out_features)
+
+
 if __name__ == '__main__':
-    batch_size = 4
-    n_units = 2
-    d_inputs = 8
-    d_outputs = 6
-
-    x = torch.ones(size=(batch_size, n_units, d_inputs))
-    l = UnitWiseLinear(n_units, d_inputs, d_outputs)
-
-    y = l(x)
+    main()

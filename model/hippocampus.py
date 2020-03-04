@@ -1,11 +1,12 @@
 from torch import nn
 
 
-class HippoCampusNetwork(nn.Module):
-    def __init__(self, num_units_layer, dim_inputs, dim_attention_global, dim_attention_unit):
+class Hippocampus(nn.Module):
+    def __init__(self, num_units_regions, dim_inputs, dim_attention_global, dim_attention_unit):
         super().__init__()
-        self.num_units = sum(num_units_layer)
+        self.num_units = sum(num_units_regions)
         self.dim_inputs = dim_inputs
+        self.dim_outputs = self.num_units * dim_attention_unit
         self.dim_attention_global = dim_attention_global
         self.dim_attention_unit = dim_attention_unit
 
@@ -27,6 +28,7 @@ class HippoCampusNetwork(nn.Module):
     def extra_repr(self) -> str:
         return 'num_units:{num_units}, ' \
                'dim_inputs:{dim_inputs}, ' \
+               'dim_outputs:{dim_outputs}, ' \
                'dim_attention_global:{dim_attention_global}, ' \
                'dim_attention_unit:{dim_attention_unit}'.format(**self.__dict__)
 

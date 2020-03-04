@@ -152,7 +152,7 @@ while n_episodes > 0:
         results.append(result[:selected_steps])
 results = torch.stack(results)
 
-save(results, '../data', 'car-racing.64')
+save(results, 'data', 'car-racing.64')
 pass
 
 if __name__ == '__main__':
