@@ -47,8 +47,8 @@ class Cortex(nn.Module):
         :return:
         """
         if att_outputs is not None:
-            with torch.no_grad():
-                att_outputs = torch.split(att_outputs, self.num_units_regions, dim=1)
+            att_outputs = att_outputs.detach()
+            att_outputs = torch.split(att_outputs, self.num_units_regions, dim=1)
 
         enc_outputs = []
         agg_outputs = []

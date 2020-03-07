@@ -1,59 +1,69 @@
+import numpy as np
 import torch
 from torch.nn.functional import cosine_similarity
-from tb import *
+import tb
 
 
-def contrastive_loss(sample1, sample2, negatives, weights):
+def contrastive_loss(enc_outputs, agg_outputs, negatives, weights):
     """
-    :param sample1: batch_size * n_units * d
-    :param sample2: batch_size * n_units * d
-    :param negatives: n_neg * n_units * d
+    :param enc_outputs: batch_size * n_units * d, encode_outputs
+    :param agg_outputs: batch_size * n_units * d, agg_outputs
+    :param negatives: n_neg * n_units * d, memories of encode_outputs
     :param weights: batch_size * n_neg * n_units
     """
 
-    #
-    # def dist(x1, x2):
-    #     x1_norm, x2_norm = torch.norm(x1, dim=-1), torch.norm(x2, dim=-1)
-    #     dot = torch.mul(x1, x2).sum(-1)
-    #
-    #     cosine = dot / (x1_norm * x2_norm)
-    #     return cosine
-    #
-    # def dist(x1, x2):
-    #     return torch.sum(torch.abs(x1 - x2), dim=-1)
+    def distance(x1, x2):
+        cs = cosine_similarity(x1, x2, dim=-1)
+        return torch.acos(cs)
 
-    def dist(x1, x2):
-        return torch.acos(cosine_similarity(x1, x2, dim=-1))
+    def sin_distance(x1, x2):
+        cs = cosine_similarity(x1, x2, dim=-1)
+        return torch.sqrt(1 - torch.pow(torch.relu(cs), 2))
 
-    pos_dist = dist(sample1, sample2)  # batch_size * n_units
-    neg_dist_1 = dist(sample1.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-    neg_dist_2 = dist(sample2.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-    inner_dist = dist(sample1.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-    batch_dist = dist(sample1.unsqueeze(0), sample1.unsqueeze(1))  # batch_size * batch_size * n_units
-    s_b = batch_dist.shape[0]
-    batch_dist.masked_fill_(mask=(torch.eye(s_b).unsqueeze(-1) == 1), value=0.5)
+    def cos_distance(x1, x2):
+        cs = cosine_similarity(x1, x2, dim=-1)
+        theta = torch.acos(cs)
+        return 1 - torch.relu(cs) + torch.relu(theta - np.pi / 2)
 
-    background_dist_1 = neg_dist_1.mean(1)
-    background_dist_2 = neg_dist_2.mean(1)
+    enc_enc_dists = distance(enc_outputs.unsqueeze(0), enc_outputs.unsqueeze(1))  # batch_size * batch_size * n_units
+    # todo
+    enc_agg_cos_dists = cos_distance(enc_outputs, agg_outputs)  # batch_size * n_units
+    enc_agg_dists = distance(enc_outputs, agg_outputs)  # batch_size * n_units
+    enc_neg_dists = distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    # todo
+    agg_neg_sin_dists = sin_distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    enc_neg_sin_dists = sin_distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    agg_neg_dists = distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
 
-    neg_dist_1 *= weights
-    neg_dist_1 = neg_dist_1.sum(1)  # batch_size * n_units
-    neg_dist_2 *= weights
-    neg_dist_2 = neg_dist_2.sum(1)  # batch_size * n_units
+    tb.histogram(enc_enc_dists=enc_enc_dists,
+                 enc_neg_dists=enc_neg_dists,
+                 enc_agg_cos_dists=enc_agg_cos_dists,
+                 enc_agg_dists=enc_agg_dists,
+                 agg_neg_dists=agg_neg_dists,
+                 agg_neg_sin_dists=agg_neg_sin_dists)
 
-    if steps[0] % TENSOR_BOARD_STEPS == 1:
-        writer.add_histogram('inner_dist', inner_dist, steps[0])
-        writer.add_histogram('batch_dist', batch_dist, steps[0])
-        writer.add_histogram('pos_dist', pos_dist, steps[0])
-        writer.add_histogram('neg_dist', neg_dist_2, steps[0])
+    agg_neg_dist = agg_neg_dists.mean(1)
+    agg_neg_sin_dist = agg_neg_sin_dists.mean(1)
+    enc_neg_sin_dist = enc_neg_sin_dists.mean(1)
+
+    agg_neg_w_dist = (agg_neg_dists * weights).sum(1)  # batch_size * n_units
+    agg_neg_w_sin_dist = (agg_neg_sin_dists * weights).sum(1)  # batch_size * n_units
 
     # squeeze loss to [-1, 0)
-    loss = (- torch.exp(-pos_dist / neg_dist_1)
-            - torch.exp(-pos_dist / neg_dist_2)).mean()  # batch_size * n_units.mean()
-    background_loss = (- torch.exp(-pos_dist / background_dist_1)
-                       - torch.exp(-pos_dist / background_dist_2)).mean()  # batch_size * n_units.mean()
+    def squash(z):
+        return 1 - torch.exp(-z)
 
-    return loss, background_loss
+    weight_loss = torch.mean(squash(enc_agg_dists / agg_neg_w_dist))
+    # background_loss = 0.5 * (torch.mean(squash(enc_agg_cos_dists / agg_neg_sin_dist)) +
+    #                          torch.mean(squash(enc_agg_cos_dists / enc_neg_sin_dist)))
+    background_loss = (torch.mean(squash(enc_agg_dists / agg_neg_dist)))
+    # background_loss = torch.mean(enc_agg_dists - agg_neg_dist)
+    # background_loss = 0.5 * torch.mean(squash(enc_agg_dists / enc_neg_dist) + squash(enc_agg_dists / agg_neg_dist))
+
+    tb.add_scalar(background_loss=background_loss,
+                  weight_loss=weight_loss)
+
+    return weight_loss, background_loss
 
 
 def cosine_loss(x1, x2):

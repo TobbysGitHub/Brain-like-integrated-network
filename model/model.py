@@ -20,7 +20,8 @@ class Model(nn.Module):
         self.hippocampus = Hippocampus(num_units_regions=num_units_regions,
                                        dim_inputs=self.cortex.dim_outputs,
                                        dim_attention_global=opt.dim_attention_global,
-                                       dim_attention_unit=opt.dim_attention_unit)
+                                       dim_attention_unit=opt.dim_attention_unit,
+                                       mask_p=opt.attention_mask_p)
 
         self.memory = Memory(num_units_regions=num_units_regions,
                              mask_p=opt.attention_mask_p,
