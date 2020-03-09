@@ -4,6 +4,7 @@ TENSOR_BOARD_STEPS = 1
 writer = SummaryWriter()
 
 steps = [0]
+best_loss = [1000]
 
 
 def histogram(**kwargs):

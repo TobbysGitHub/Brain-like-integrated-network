@@ -7,9 +7,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import opt_parser
-from model.function.loss_fn import contrastive_loss, cosine_loss
-from model.model import Model
-import tb
+from model.function.loss_fn import contrastive_loss
+from model.Model import Model
+from tensor_board import tb
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -47,27 +47,6 @@ def prepare_data_loader():
 
     return data_loader
 
-    # if l1 is not None:
-    #     writer.add_scalar('cortex_loss', l1.item(), steps[0])
-    #     writer.add_scalar('cosine_loss', l2.item(), steps[0])
-    #     writer.add_scalar('hippocampus_loss', l3.item(), steps[0])
-    #     writer.add_scalar('background_loss', l4.item(), steps[0])
-    #
-    # if steps[0] % TENSOR_BOARD_STEPS == 1:
-    #     if enc_outputs is not None:
-    #         writer.add_histogram('enc_outputs', enc_outputs, steps[0])
-    #         writer.add_histogram('enc_outputs_span', enc_outputs.max(0)[0] - enc_outputs.min(0)[0], steps[0])
-    #     if agg_outputs is not None:
-    #         writer.add_histogram('agg_outputs', agg_outputs, steps[0])
-    #     if att_outputs is not None:
-    #         writer.add_histogram('att_outputs', att_outputs, steps[0])
-    #     if weights is not None:
-    #         writer.add_histogram('weights_max', weights.max(1)[0], steps[0])
-    #
-    #     model.eval()
-    #     writer.add_histogram('temperature', model.hippocampus.temperature, steps[0])
-    #     model.train()
-
 
 def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, memories, weights):
     cortex_loss, background_loss = contrastive_loss(enc_outputs, agg_outputs, memories, weights)
@@ -80,6 +59,8 @@ def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, memories, weight
     optimizers[1].zero_grad()
     hippocampus_loss.backward(retain_graph=True)
     optimizers[1].step()
+
+    return cortex_loss
 
 
 def train_batch(batch, model, optimizers, opt):
@@ -107,8 +88,9 @@ def train_batch(batch, model, optimizers, opt):
 
         enc_outputs, agg_outputs, agg_outputs_preview = model.cortex(inputs, att_outputs)
 
+        loss = None
         if att_outputs is not None:
-            optimize(optimizers, enc_outputs, agg_outputs, att_outputs, memories[1], weights)
+            loss = optimize(optimizers, enc_outputs, agg_outputs, att_outputs, memories[1], weights)
 
         if attention is not None:
             memories = (attention, enc_outputs)
@@ -119,6 +101,9 @@ def train_batch(batch, model, optimizers, opt):
             # att_outputs=att_outputs,
             weights=weights,
             weights_max=None if weights is None else weights.max(1)[0])
+
+        if tb.steps[0] > 1000 and tb.steps[0] % 50 == 0:
+            torch.save(model.state_dict(), f='model_state/steps_' + str(tb.steps[0]))
 
 
 def train(model, data_loader, optimizers, opt):
@@ -136,6 +121,12 @@ def main():
     num_units_regions = [8]
 
     model = Model(num_units_regions, opt)
+    logging.warning(model)
+
+    # opt.state_dict = 'model_state/steps_202'
+
+    if opt.state_dict is not None:
+        model.load_state_dict(torch.load(opt.state_dict))
 
     # neuralI = NeuralInterface(dim_inputs=cortex.dim_outputs,
     #                           dim_hidden=opt.dim_hid_ni,

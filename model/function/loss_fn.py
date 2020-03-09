@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.nn.functional import cosine_similarity
-import tb
+from tensor_board import tb
 
 
 def contrastive_loss(enc_outputs, agg_outputs, negatives, weights):

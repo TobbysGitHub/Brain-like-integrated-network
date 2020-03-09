@@ -4,28 +4,24 @@ import argparse
 def parse_opt():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--state_dict',
+                        help='model state_dict')
+
     parser.add_argument('--epochs', default=4,
                         help='epochs')
 
     parser.add_argument('--batch_size', default=16,
                         help='size of batch')
 
-    # 8
     parser.add_argument('--dim_unit', default=8,
                         help='dim of the output of each unit')
 
-    # 32
     parser.add_argument('--dim_hid_enc_unit', default=32,
                         help='number of hidden nodes inside each unit`s encode network')
 
-    # 21
     parser.add_argument('--dim_hid_agg_unit', default=32,
                         help='number of hidden nodes inside each unit`s aggregate network')
 
-    # parser.add_argument('--dim_hid_ni', default=32,
-    #                     help='number of hidden nodes inside neural interface network')
-
-    # 20
     parser.add_argument('--max_bptt', default=8,
                         help='the max steps of back-propagation-through-time in GRU of the aggregate network')
 
