@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import opt_parser
 from model.modules import *
 from model.modules.components.fixed_size_queue import FixedSizeQueue
 
@@ -39,7 +38,7 @@ class CortexRegion(nn.Module):
                                      max_bptt=max_bptt)
 
         self.intro_region_queue = FixedSizeQueue(t_intro_region)
-        self.inter_region_queue = FixedSizeQueue(t_inter_region - 1)
+        self.inter_region_queue = FixedSizeQueue(t_inter_region)
 
     def forward(self, inputs):
         """

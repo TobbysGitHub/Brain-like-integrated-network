@@ -1,10 +1,13 @@
 from torch.utils.tensorboard import SummaryWriter
 
-TENSOR_BOARD_STEPS = 1
-writer = SummaryWriter()
+TENSOR_BOARD_STEPS = 10
+writer = []
 
 steps = [0]
-best_loss = [1000]
+
+
+def creat_model_writer(log_dir):
+    writer.append(SummaryWriter(log_dir=log_dir))
 
 
 def histogram(**kwargs):
@@ -12,9 +15,9 @@ def histogram(**kwargs):
         for name, data in kwargs.items():
             if data is None:
                 continue
-            writer.add_histogram(name, data, steps[0])
+            writer[0].add_histogram(name, data, steps[0])
 
 
 def add_scalar(**kwargs):
     for name, data in kwargs.items():
-        writer.add_scalar(name, data, steps[0])
+        writer[0].add_scalar(name, data, steps[0])

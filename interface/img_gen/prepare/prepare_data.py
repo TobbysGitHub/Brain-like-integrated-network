@@ -1,15 +1,15 @@
 import torch
 from tqdm import tqdm
 
-import opt_parser
-from model.Model import Model
+from dirs import MODEL_DOMAIN_DIR
+from interface.img_gen import opt_parser
+from model.brain_like_model import Model
 from model.train import prepare_data_loader
 
-samples = 0
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def gen_data(model, data_loader):
-    global samples
+def gen_data(model, data_loader, samples):
     data_img, data_outputs, data_attention = [], [], []
     for batch in data_loader:
         agg_outputs_preview, memories = None, None
@@ -26,45 +26,35 @@ def gen_data(model, data_loader):
                 attention, weights, att_outputs = (None,) * 3
 
             enc_outputs, agg_outputs, agg_outputs_preview = model.cortex(inputs, att_outputs)
-            if not index % 10 == 0 or attention is None:
+            if index < 60 or not index % 10 == 0 or attention is None:
                 continue
 
-            samples += len(attention)
+            samples -= len(attention)
             data_img.append(inputs[:, -96 * 96 - 3:-3])
             data_outputs.append(enc_outputs)
             data_attention.append(attention_global)
-            # if samples >= 256:
-            if samples >= 1024 * 8:
+            if samples <= 0:
                 return tuple(torch.cat(x, dim=0) for x in (data_img, data_outputs, data_attention))
 
 
 def main():
-    global samples
     opt = opt_parser.parse_opt()
-    num_units_regions = [8]
 
-    # model = Model(num_units_regions, opt)
-    # model.load_state_dict(torch.load('model_state/steps_2650'))
-    #
-    # data_loader = prepare_data_loader()
-    #
-    # with torch.no_grad():
-    #     data = gen_data(model, data_loader)
-    #
-    # torch.save(data[0], f='data/car-racing-img.{}'.format(samples))
-    # torch.save(data[1], f='data/car-racing-outputs.{}'.format(samples))
-    # torch.save(data[2], f='data/car-racing-attention.{}'.format(samples))
+    model_opt = torch.load('{}/{}/opt'.format(MODEL_DOMAIN_DIR, opt.model_repr))
+    samples = int(opt.samples)
+    # samples = 16
 
-    model_untrained = Model(num_units_regions, opt)
+    model = Model(model_opt).to(device)
+    model.load_state_dict(torch.load(model_opt.state_dict, map_location=device))
 
-    data_loader = prepare_data_loader()
+    data_loader = prepare_data_loader(model_opt.batch_size, shuffle=False, device=device)
 
     with torch.no_grad():
-        data_untrained = gen_data(model_untrained, data_loader)
+        data = gen_data(model, data_loader, samples)
 
-    torch.save(data_untrained[0], f='data/car-racing-img-untrained.{}'.format(samples))
-    torch.save(data_untrained[1], f='data/car-racing-outputs-untrained.{}'.format(samples))
-    torch.save(data_untrained[2], f='data/car-racing-attention-untrained.{}'.format(samples))
+    torch.save(data[0], f='{}/{}/car-racing-img.{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, samples))
+    torch.save(data[1], f='{}/{}/car-racing-outputs.{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, samples))
+    torch.save(data[2], f='{}/{}/car-racing-attention.{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, samples))
 
 
 if __name__ == '__main__':

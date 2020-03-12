@@ -7,11 +7,20 @@ def parse_opt():
     parser.add_argument('--state_dict',
                         help='model state_dict')
 
-    parser.add_argument('--epochs', default=4,
+    parser.add_argument('--early_stop', type=int, default=1e10,
+                        help='to save model')
+
+    parser.add_argument('--dir',
+                        help='the save dictionary')
+
+    parser.add_argument('--epochs', default=20,
                         help='epochs')
 
-    parser.add_argument('--batch_size', default=16,
+    parser.add_argument('--batch_size', default=256,
                         help='size of batch')
+
+    parser.add_argument('--num_units_regions', nargs='+', type=int, default=[8],
+                        help='list of num of units in diff regions')
 
     parser.add_argument('--dim_unit', default=8,
                         help='dim of the output of each unit')
@@ -28,7 +37,7 @@ def parse_opt():
     parser.add_argument('--t_intro_region', default=4,
                         help='the delay of aggregation output')
 
-    parser.add_argument('--t_inter_region', default=4,
+    parser.add_argument('--t_inter_region', default=1,
                         help='the delay of backward inputs')
     # 32
     parser.add_argument('--dim_attention_global', default=16,
@@ -37,20 +46,14 @@ def parse_opt():
     parser.add_argument('--dim_attention_unit', default=4,
                         help='the dim of attention of query and key in each unit')
 
-    parser.add_argument('--memory_size', default=256,
-                        help='the negative samples in each unit')
-
-    parser.add_argument('--memory_delay', default=10,
-                        help='the delay to be sent to memory')
+    parser.add_argument('--num_attention_groups', default=8,
+                        help='the num of groups when apply soft_max attention')
 
     parser.add_argument('--attention_mask_p', default=0.,
                         help='random mask some memory to avoid over-fitting')
 
     parser.add_argument('--outputs_mix', default=0.5,
                         help='the mix ratio between att_outputs and enc_outputs')
-
-    parser.add_argument('--mem_interval', default=4,
-                        help='the memory load interval')
 
     # parser.add_argument('--reward_gamma', default=0.88,
     #                     help='decay rate when the reward`s influence back propagate on memory through time')

@@ -156,20 +156,20 @@ def play(env, agent, n_episodes):
 # In[8]:
 
 
-load(agent, 'dir_chk', 'model_weights_350-550.pth')
-play(env, agent, n_episodes=5)
-
-
-# ### 4. Load and Play: Score = 580-660
-
-# In[6]:
-
-
-load(agent, 'dir_chk', 'model_weights_480-660.pth')
-play(env, agent, n_episodes=5)
-
-
-# ### 5. Load and Play: Score = 820-980
+# load(agent, 'dir_chk', 'model_weights_350-550.pth')
+# play(env, agent, n_episodes=5)
+#
+#
+# # ### 4. Load and Play: Score = 580-660
+#
+# # In[6]:
+#
+#
+# load(agent, 'dir_chk', 'model_weights_480-660.pth')
+# play(env, agent, n_episodes=5)
+#
+#
+# # ### 5. Load and Play: Score = 820-980
 
 # In[14]:
 

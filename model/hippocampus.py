@@ -6,13 +6,14 @@ from model.modules.components.random_mask import RandomMask
 
 
 class Hippocampus(nn.Module):
-    def __init__(self, num_units_regions, dim_inputs, dim_attention_global, dim_attention_unit, mask_p):
+    def __init__(self, num_units_regions, dim_inputs, dim_attention_global, dim_attention_unit, num_attention_groups, mask_p):
         super().__init__()
         self.num_units = sum(num_units_regions)
         self.dim_inputs = dim_inputs
         self.dim_outputs = self.num_units * dim_attention_unit
         self.dim_attention_global = dim_attention_global
         self.dim_attention_unit = dim_attention_unit
+        self.num_groups = num_attention_groups
         self.mask_p = mask_p
 
         self.model = nn.Sequential(
@@ -43,7 +44,8 @@ class Hippocampus(nn.Module):
             torch.nn.init.zeros_(m.bias)
 
     def forward(self, x, memories=None, eye_mask=True):
-        x = x.view(-1, self.dim_inputs)
+        batch_size = x.shape[0]
+        x = x.view(batch_size, self.dim_inputs)
         # project to units
         attention = self.model(x)
         attention = attention.view(-1, self.num_units, self.dim_attention_unit)
@@ -62,9 +64,9 @@ class Hippocampus(nn.Module):
             if eye_mask:
                 weights = self.eye_mask(weights)
 
-            weights = weights.view(256, 32, 8, self.num_units)
+            weights = weights.view(batch_size, batch_size // self.num_groups, self.num_groups, self.num_units)
             weights = torch.softmax(weights, dim=1)
-            weights = weights.view(256, 256, self.num_units) / 8
+            weights = weights.view(batch_size, batch_size, self.num_units) / 8
 
             outputs = torch.sum(mem_value * weights.unsqueeze(-1), dim=1)  # s_b * num_units * d
             return attention, weights, outputs

@@ -1,7 +1,9 @@
 .idea/
 __pycache__/
-data
 .*
-runs
-model_state
+debug
+data
+model_domain
+interface_runs
+model_runs
 report

@@ -4,50 +4,55 @@ from torch.nn.functional import cosine_similarity
 from tensor_board import tb
 
 
-def contrastive_loss(enc_outputs, agg_outputs, negatives, weights):
+def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     """
     :param enc_outputs: batch_size * n_units * d, encode_outputs
     :param agg_outputs: batch_size * n_units * d, agg_outputs
+    :param att_outputs: batch_size * n_units * d, att_outputs
     :param negatives: n_neg * n_units * d, memories of encode_outputs
     :param weights: batch_size * n_neg * n_units
     """
 
     def distance(x1, x2):
         cs = cosine_similarity(x1, x2, dim=-1)
+        cs.data = torch.clamp(cs, min=1e-5 - 1, max=1 - 1e-5)
         return torch.acos(cs)
 
-    def sin_distance(x1, x2):
-        cs = cosine_similarity(x1, x2, dim=-1)
-        return torch.sqrt(1 - torch.pow(torch.relu(cs), 2))
-
-    def cos_distance(x1, x2):
-        cs = cosine_similarity(x1, x2, dim=-1)
-        theta = torch.acos(cs)
-        return 1 - torch.relu(cs) + torch.relu(theta - np.pi / 2)
+    # def sin_distance(x1, x2):
+    #     cs = cosine_similarity(x1, x2, dim=-1)
+    #     return torch.sqrt(1 - torch.pow(torch.relu(cs), 2))
+    #
+    # def cos_distance(x1, x2):
+    #     cs = cosine_similarity(x1, x2, dim=-1)
+    #     theta = torch.acos(cs)
+    #     return 1 - torch.relu(cs) + torch.relu(theta - np.pi / 2)
 
     enc_enc_dists = distance(enc_outputs.unsqueeze(0), enc_outputs.unsqueeze(1))  # batch_size * batch_size * n_units
     # todo
-    enc_agg_cos_dists = cos_distance(enc_outputs, agg_outputs)  # batch_size * n_units
+    # enc_agg_cos_dists = cos_distance(enc_outputs, agg_outputs)  # batch_size * n_units
     enc_agg_dists = distance(enc_outputs, agg_outputs)  # batch_size * n_units
-    enc_neg_dists = distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    enc_att_dists = distance(enc_outputs, att_outputs)  # batch_size * n_units
+    # enc_neg_dists = distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
     # todo
-    agg_neg_sin_dists = sin_distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-    enc_neg_sin_dists = sin_distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    # agg_neg_sin_dists = sin_distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    # enc_neg_sin_dists = sin_distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
     agg_neg_dists = distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
 
     tb.histogram(enc_enc_dists=enc_enc_dists,
-                 enc_neg_dists=enc_neg_dists,
-                 enc_agg_cos_dists=enc_agg_cos_dists,
+                 # enc_neg_dists=enc_neg_dists,
+                 # enc_agg_cos_dists=enc_agg_cos_dists,
                  enc_agg_dists=enc_agg_dists,
                  agg_neg_dists=agg_neg_dists,
-                 agg_neg_sin_dists=agg_neg_sin_dists)
+                 weights_max=None if weights is None else weights.max(1)[0])
+    # agg_neg_sin_dists=agg_neg_sin_dists)
 
     agg_neg_dist = agg_neg_dists.mean(1)
-    agg_neg_sin_dist = agg_neg_sin_dists.mean(1)
-    enc_neg_sin_dist = enc_neg_sin_dists.mean(1)
+    # agg_neg_sin_dist = agg_neg_sin_dists.mean(1)
+    # enc_neg_sin_dist = enc_neg_sin_dists.mean(1)
 
     agg_neg_w_dist = (agg_neg_dists * weights).sum(1)  # batch_size * n_units
-    agg_neg_w_sin_dist = (agg_neg_sin_dists * weights).sum(1)  # batch_size * n_units
+
+    # agg_neg_w_sin_dist = (agg_neg_sin_dists * weights).sum(1)  # batch_size * n_units
 
     # squeeze loss to [-1, 0)
     def squash(z):
@@ -60,7 +65,12 @@ def contrastive_loss(enc_outputs, agg_outputs, negatives, weights):
     # background_loss = torch.mean(enc_agg_dists - agg_neg_dist)
     # background_loss = 0.5 * torch.mean(squash(enc_agg_dists / enc_neg_dist) + squash(enc_agg_dists / agg_neg_dist))
 
-    tb.add_scalar(background_loss=background_loss,
+    tb.add_scalar(agg_neg_dist=agg_neg_dist.mean(),
+                  agg_neg_w_dist=agg_neg_w_dist.mean(),
+                  enc_att_dist=enc_att_dists.mean(),
+                  enc_enc_dist=enc_enc_dists.mean(),
+                  enc_agg_dist=enc_agg_dists.mean(),
+                  background_loss=background_loss,
                   weight_loss=weight_loss)
 
     return weight_loss, background_loss

@@ -7,6 +7,7 @@ import time
 from collections import deque
 
 # from agent import Agent
+from dirs import DATA_DIR
 from env.car_racing.agent import Agent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -130,30 +131,42 @@ def record(env_wrap, agent):
     print('Score: {:.2f} \tTime: {:02}:{:02}:{:02} \tSteps:{}'
           .format(score, s // 3600, s % 3600 // 60, s % 60, len(states)))
 
-    return torch.cat([torch.from_numpy(np.array(x)) for x in (states, actions, rewards)], dim=-1), score
+    return torch.cat([torch.from_numpy(np.array(x)).float() for x in (states, actions, rewards)], dim=-1), score
 
 
 agent = Agent(device)
 
 env_wrap = Wrapper(env)
 
-load(agent, 'dir_chk', 'model_weights_820-980.pth')
+load(agent, 'env/car_racing/dir_chk', 'model_weights_820-980.pth')
 
-n_episodes = 64
-min_steps = 700
-selected_steps = 512
-min_score = 800
+ZOOM_FRAMES = 50
 
-results = []
-while n_episodes > 0:
-    result, score = record(env_wrap, agent)
-    if len(result) >= selected_steps and score > min_score:
-        n_episodes -= 1
-        results.append(result[:selected_steps])
-results = torch.stack(results)
 
-save(results, 'data', 'car-racing.64')
-pass
+def gen_data(n_episodes, steps=512, min_score=800):
+    if not steps == -1:
+        min_steps = steps + 200
+    else:
+        assert n_episodes == 1
+        min_steps = 0
+
+    results = []
+    while len(results) < n_episodes:
+        result, score = record(env_wrap, agent)
+        if len(result) >= min_steps + ZOOM_FRAMES and score > min_score:
+            if not steps == -1:
+                results.append(result[ZOOM_FRAMES:ZOOM_FRAMES + steps])
+            else:
+                results.append(result)
+    results = torch.stack(results)
+
+    save(results, DATA_DIR, 'car-racing.{}'.format(n_episodes))
+
+
+gen_data(1, steps=-1)
+gen_data(16)
+gen_data(32)
+gen_data(64)
 
 if __name__ == '__main__':
     pass
