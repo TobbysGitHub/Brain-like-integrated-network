@@ -13,46 +13,46 @@ def parse_opt():
     parser.add_argument('--dir',
                         help='the save dictionary')
 
-    parser.add_argument('--epochs', default=20,
+    parser.add_argument('--epochs', default=20, type=int,
                         help='epochs')
 
-    parser.add_argument('--batch_size', default=256,
+    parser.add_argument('--batch_size', default=256, type=int,
                         help='size of batch')
 
     parser.add_argument('--num_units_regions', nargs='+', type=int, default=[8],
                         help='list of num of units in diff regions')
 
-    parser.add_argument('--dim_unit', default=8,
+    parser.add_argument('--dim_unit', default=8, type=int,
                         help='dim of the output of each unit')
 
-    parser.add_argument('--dim_hid_enc_unit', default=32,
+    parser.add_argument('--dim_hid_enc_unit', default=32, type=int,
                         help='number of hidden nodes inside each unit`s encode network')
 
-    parser.add_argument('--dim_hid_agg_unit', default=32,
+    parser.add_argument('--dim_hid_agg_unit', default=32, type=int,
                         help='number of hidden nodes inside each unit`s aggregate network')
 
-    parser.add_argument('--max_bptt', default=8,
+    parser.add_argument('--max_bptt', default=8, type=int,
                         help='the max steps of back-propagation-through-time in GRU of the aggregate network')
 
-    parser.add_argument('--t_intro_region', default=4,
+    parser.add_argument('--t_intro_region', default=4, type=int,
                         help='the delay of aggregation output')
 
-    parser.add_argument('--t_inter_region', default=1,
+    parser.add_argument('--t_inter_region', default=1, type=int,
                         help='the delay of backward inputs')
     # 32
-    parser.add_argument('--dim_attention_global', default=16,
+    parser.add_argument('--dim_attention_global', default=16, type=int,
                         help='the dim of attention of query and key in each unit')
     # 8
-    parser.add_argument('--dim_attention_unit', default=4,
+    parser.add_argument('--dim_attention_unit', default=4, type=int,
                         help='the dim of attention of query and key in each unit')
 
-    parser.add_argument('--num_attention_groups', default=8,
+    parser.add_argument('--num_attention_groups', default=8, type=int,
                         help='the num of groups when apply soft_max attention')
 
-    parser.add_argument('--attention_mask_p', default=0.,
+    parser.add_argument('--attention_mask_p', default=0., type=float,
                         help='random mask some memory to avoid over-fitting')
 
-    parser.add_argument('--outputs_mix', default=0.5,
+    parser.add_argument('--outputs_mix', default=0.5, type=float,
                         help='the mix ratio between att_outputs and enc_outputs')
 
     # parser.add_argument('--reward_gamma', default=0.88,

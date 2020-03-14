@@ -25,11 +25,12 @@ def load(dir, file_name):
 
 
 def monitor(model, loss):
+    global early_stopped
     opt = model.opt
     if hasattr(opt, 'loss') and opt.loss <= loss:
         last_update = int(opt.state_dict.split('.')[-1])
         if tb.steps[0] - last_update > opt.early_stop:
-            exit(model.extra_repr())
+            early_stopped = True
         return
 
     dir = '{}/{}'.format(MODEL_DOMAIN_DIR, model.extra_repr())
@@ -131,13 +132,21 @@ def train(model, data_loader, optimizers, opt):
     for epoch in range(opt.epochs):
         for batch in data_loader:
             train_batch(batch, model, optimizers, opt, epoch)
+            if early_stopped:
+                break
+
+        if early_stopped:
+            break
 
 
 def main():
+    global model_name, early_stopped
+    early_stopped = False
     opt = opt_parser.parse_opt()
     # opt = torch.load('{}/model__unit_n8_d8_@d16_@unit_d4_@mem256_@groups8_Mar10_21-00-02/opt')
 
     model = Model(opt).to(device)
+    model_name = model.extra_repr()
     logging.warning(model)
 
     tb.creat_model_writer('{}/{}'.format(MODEL_RUNS_DIR, model.extra_repr()))
@@ -159,8 +168,6 @@ def main():
     with torch.autograd.detect_anomaly():
         train(model, data_loader, optimizers, opt)
 
-    return model.extra_repr()
-
 
 if __name__ == '__main__':
-    exit(main())
+    main()
