@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from dirs import MODEL_DOMAIN_DIR, DATA_DIR, MODEL_RUNS_DIR
 from model import opt_parser
+from model.function.flip_grad import flip_grad
 from model.function.loss_fn import contrastive_loss
 from model.brain_like_model import Model
 from tensor_board import tb
@@ -84,9 +85,10 @@ def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, memories, weight
     # background_loss.backward(retain_graph=True)
     optimizers[0].step()
     #
-    hippocampus_loss = - cortex_loss
-    optimizers[1].zero_grad()
-    hippocampus_loss.backward(retain_graph=True)
+    # hippocampus_loss = - cortex_loss
+    # optimizers[1].zero_grad()
+    # hippocampus_loss.backward(retain_graph=True)
+    flip_grad(optimizers[1])
     optimizers[1].step()
 
     return background_loss
