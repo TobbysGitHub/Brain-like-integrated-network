@@ -12,6 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def gen_data(model, data_loader, samples):
     data_img, data_outputs, data_attention = [], [], []
     for batch in data_loader:
+        batch = batch.to(device)
         agg_outputs_preview, memories = None, None
         for index, inputs in tqdm(enumerate(batch), mininterval=2, leave=True):
             if agg_outputs_preview is not None:
@@ -47,7 +48,7 @@ def main():
     model = Model(model_opt).to(device)
     model.load_state_dict(torch.load(model_opt.state_dict, map_location=device))
 
-    data_loader = prepare_data_loader(model_opt.batch_size, shuffle=False, device=device)
+    data_loader = prepare_data_loader(model_opt.batch_size, shuffle=False)
 
     with torch.no_grad():
         data = gen_data(model, data_loader, samples)
