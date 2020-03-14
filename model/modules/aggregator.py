@@ -32,7 +32,7 @@ class Aggregator(nn.Module):
         """
         if x2 is None:
             if self.dim_inputs2 == 0:
-                x2 = torch.zeros(0)
+                x2 = torch.zeros(0, device=x1.device)
             else:
                 return None
 

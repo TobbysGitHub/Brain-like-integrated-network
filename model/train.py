@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def load(dir, file_name):
-    return torch.load(os.path.join(dir, file_name), map_location=device)
+    return torch.load(os.path.join(dir, file_name))
 
 
 def monitor(model, loss):
@@ -102,7 +102,7 @@ def train_batch(batch, model, optimizers, opt, epoch):
     # when not None?
     # enc_outputs >>| agg_outputs_preview >>| attention >> agg_outputs >> memories >>| weights, att_outputs
     # for index in tqdm(range(frames - 3), mininterval=2, desc=desc, leave=None):
-    for inputs in tqdm(batch, mininterval=2, desc=desc, leave=None):
+    for inputs in tqdm(batch, mininterval=2, desc=desc, leave=True):
         tb.steps[0] = 1 + tb.steps[0]
         if agg_outputs_preview is not None:
             if memories is not None:
@@ -131,6 +131,7 @@ def train_batch(batch, model, optimizers, opt, epoch):
 def train(model, data_loader, optimizers, opt):
     for epoch in range(opt.epochs):
         for batch in data_loader:
+            batch = batch.to(device)
             train_batch(batch, model, optimizers, opt, epoch)
             if early_stopped:
                 break
