@@ -41,9 +41,12 @@ def monitor(model, loss):
     f = '{}/model_state_dict.{}'.format(dir, tb.steps[0])
     torch.save(model.state_dict(), f=f)
     opt.loss = loss.item()
+    f_old = opt.state_dict
     opt.state_dict = f
     f = '{}/opt'.format(dir)
     torch.save(opt, f=f)
+    if f_old is not None and os.path.dirname(f_old) == os.path.dirname(f):
+        os.remove(f_old)
 
 
 def collate_fn(batch):
