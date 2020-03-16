@@ -168,8 +168,7 @@ def main():
 
     data_loader = prepare_data_loader(batch_size=opt.batch_size)
 
-    with torch.autograd.detect_anomaly():
-        train(model, data_loader, optimizers, opt)
+    train(model, data_loader, optimizers, opt)
 
 
 if __name__ == '__main__':

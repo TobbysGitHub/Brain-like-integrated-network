@@ -86,13 +86,12 @@ def visualize(model, data_loader, mode, file, nrow=8):
         .contiguous() \
         .view(-1, 3, 96, 96)
 
-    utils.save_image(img, filename=file, nrow=nrow, normalize=True, scale_each=True)
+    utils.save_image(img, file, nrow=nrow, normalize=True, scale_each=True)
 
 
 def main():
     opt = opt_parser.parse_opt()
-    opt.epochs = 1
-    opt.mode = 1
+
     tb.creat_model_writer(log_dir='{}/{}'.format(INTERFACE_RUNS_DIR, opt.model_repr))
 
     model_opt = torch.load('{}/{}/opt'.format(MODEL_DOMAIN_DIR, opt.model_repr))
