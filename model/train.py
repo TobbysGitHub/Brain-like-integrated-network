@@ -156,13 +156,12 @@ def train(model, data_loader, optimizers, opt):
 
 
 def main():
-    global model_name, early_stopped
+    global early_stopped
     early_stopped = False
     opt = opt_parser.parse_opt()
     # opt = torch.load('{}/model__unit_n8_d8_@d16_@unit_d4_@mem256_@groups8_Mar10_21-00-02/opt')
 
     model = Model(opt).to(device)
-    model_name = model.extra_repr()
     logging.warning(model)
 
     tb.creat_model_writer('{}/{}'.format(MODEL_RUNS_DIR, model.extra_repr()))
@@ -182,6 +181,8 @@ def main():
     data_loader = prepare_data_loader(batch_size=opt.batch_size)
 
     train(model, data_loader, optimizers, opt)
+
+    return model.extra_repr()
 
 
 if __name__ == '__main__':
