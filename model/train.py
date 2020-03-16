@@ -55,13 +55,13 @@ def collate_fn(batch):
     batch_size = batch.shape[0]
     assert batch.shape == (batch_size, 512, 96 * 96 + 4)
     # trim the first 13 frames for length alignment
-    batch = batch[:, -499:, :-1]  # batch_size * 499 * (96 * 96 + 3)
+    batch = batch[:, -499:, :]  # batch_size * 499 * (96 * 96 + 4)
     # (sizedim - size) / step + 1 = (499 - 259) // 16 + 1 =16
-    batch = batch.unfold(dimension=1, size=259, step=16)  # batch_size * 16 * (96*96+3) * 259
+    batch = batch.unfold(dimension=1, size=259, step=16)  # batch_size * 16 * (96*96+4) * 259
     # (259 - 4)//1 + 1 = 256
-    batch = batch.unfold(dimension=3, size=4, step=1)  # batch_size * 16 * (96*96+3) * 256 * 4
+    batch = batch.unfold(dimension=3, size=4, step=1)  # batch_size * 16 * (96*96+4) * 256 * 4
     batch = batch.permute(3, 0, 1, 4, 2)
-    batch = batch.contiguous().view(256, batch_size * 16, 4 * (96 * 96 + 3))  # frames256 * parallels * dim_inputs
+    batch = batch.contiguous().view(256, batch_size * 16, 4 * (96 * 96 + 4))  # frames256 * parallels * dim_inputs
 
     return batch
 

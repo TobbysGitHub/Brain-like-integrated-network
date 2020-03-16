@@ -31,7 +31,7 @@ def gen_data(model, data_loader, samples):
                 continue
 
             samples -= len(attention)
-            data_img.append(inputs[:, -96 * 96 - 3:-3])
+            data_img.append(inputs[:, -96 * 96 - 4:-4])
             data_outputs.append(enc_outputs)
             data_attention.append(attention_global)
             if samples <= 0:

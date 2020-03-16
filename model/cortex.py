@@ -16,7 +16,7 @@ class Cortex(nn.Module):
         super().__init__()
         self.num_units = sum(num_units_regions)
         self.num_units_regions = num_units_regions
-        self.dim_inputs = 4 * (96 * 96 + 3)
+        self.dim_inputs = 4 * (96 * 96 + 4)
         self.dim_outputs = self.num_units * dim_unit
 
         self.linear = nn.Linear(self.dim_inputs, 256)
