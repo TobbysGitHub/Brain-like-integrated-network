@@ -4,7 +4,7 @@ from tqdm import tqdm
 from dirs import MODEL_DOMAIN_DIR
 from interface.img_gen import opt_parser
 from model.brain_like_model import Model
-from model.train import prepare_data_loader
+from model.train import prepare_data_loader, iter_frame
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -14,7 +14,7 @@ def gen_data(model, data_loader, samples):
     for batch in data_loader:
         batch = batch.to(device)
         agg_outputs_preview, memories = None, None
-        for index, inputs in tqdm(enumerate(batch), mininterval=2, leave=True):
+        for index, inputs in tqdm(enumerate(iter_frame(batch)), mininterval=2, leave=True):
             if agg_outputs_preview is not None:
                 attention_global = model.hippocampus.model[0](
                     agg_outputs_preview.view(-1, model.hippocampus.dim_inputs))
