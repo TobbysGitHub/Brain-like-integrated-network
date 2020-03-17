@@ -94,12 +94,11 @@ def prepare_data_loader(batch_size, file='car-racing.64', shuffle=True, device=N
 def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, memories, weights):
     cortex_loss, background_loss = contrastive_loss(enc_outputs, agg_outputs, att_outputs, memories, weights)
     optimizers[0].zero_grad()
+    optimizers[1].zero_grad()
     cortex_loss.backward(retain_graph=True)
     # background_loss.backward(retain_graph=True)
     optimizers[0].step()
-    #
     # hippocampus_loss = - cortex_loss
-    # optimizers[1].zero_grad()
     # hippocampus_loss.backward(retain_graph=True)
     flip_grad(optimizers[1])
     optimizers[1].step()
@@ -172,6 +171,8 @@ def main():
     if opt.state_dict is not None:
         model.load_state_dict(torch.load(opt.state_dict, map_location=device))
         tb.steps[0] = int(opt.state_dict.split('.')[-1])
+    else:
+        tb.steps[0] = 0
 
     optimizers = [optim.Adam([dict(params=model.cortex.encoder_parameters(), lr=1e-4),
                               dict(params=model.cortex.aggregator_parameters(), lr=1e-3)]),
