@@ -26,16 +26,16 @@ class CortexRegion(nn.Module):
         self.t_inter_region = t_inter_region
         self.t_intro_region = t_intro_region
 
-        self.encoder = Encoder(num_units=num_units,
-                               dim_inputs=dim_inputs_forward,
-                               dim_hidden=dim_hid_enc_unit,
-                               dim_unit=dim_unit)
-        self.aggregator = Aggregator(num_units=num_units,
-                                     dim_inputs1=self.dim_outputs,
-                                     dim_inputs2=dim_inputs_backward,
-                                     dim_hidden=dim_hid_agg_unit,
-                                     dim_unit=dim_unit,
-                                     max_bptt=max_bptt)
+        self.encoder = EncoderRegion(num_units=num_units,
+                                     dim_inputs=dim_inputs_forward,
+                                     dim_hidden=dim_hid_enc_unit,
+                                     dim_unit=dim_unit)
+        self.aggregator = AggregatorRegion(num_units=num_units,
+                                           dim_inputs=self.dim_outputs,
+                                           dim_inputs2=dim_inputs_backward,
+                                           dim_hidden=dim_hid_agg_unit,
+                                           dim_unit=dim_unit,
+                                           max_bptt=max_bptt)
 
         self.intro_region_queue = FixedSizeQueue(t_intro_region)
         self.inter_region_queue = FixedSizeQueue(t_inter_region)

@@ -6,7 +6,8 @@ from model.modules.components.random_mask import RandomMask
 
 
 class Hippocampus(nn.Module):
-    def __init__(self, num_units_regions, dim_inputs, dim_attention_global, dim_attention_unit, num_attention_groups, mask_p):
+    def __init__(self, num_units_regions, dim_inputs, dim_attention_global, dim_attention_unit, num_attention_groups,
+                 mask_p):
         super().__init__()
         self.num_units = sum(num_units_regions)
         self.dim_inputs = dim_inputs
@@ -35,7 +36,7 @@ class Hippocampus(nn.Module):
         self.eye_mask = eye_mask_fn
         self.temperature = nn.Parameter(torch.ones(self.num_units))
 
-        # self.apply(self._weights_init)
+        self.apply(self._weights_init)
 
     @staticmethod
     def _weights_init(m):
@@ -44,6 +45,7 @@ class Hippocampus(nn.Module):
             torch.nn.init.zeros_(m.bias)
 
     def forward(self, x, memories=None, eye_mask=True):
+        x = x.detach()
         batch_size = x.shape[0]
         x = x.view(batch_size, self.dim_inputs)
         # project to units
@@ -55,7 +57,7 @@ class Hippocampus(nn.Module):
         else:
             # memories is a tuple
             mem_attention = memories[0]  # s_b * num_units(mem_capacity)
-            mem_value = memories[1]  # s_b * num_units(mem_capacity) * d
+            mem_outputs = memories[1]  # s_b * num_units(mem_capacity) * d
 
             weights = (attention.unsqueeze(1) * mem_attention).sum(-1)  # s_b * s_b * num_units
             weights = weights * self.temperature
@@ -68,7 +70,7 @@ class Hippocampus(nn.Module):
             weights = torch.softmax(weights, dim=1)
             weights = weights.view(batch_size, batch_size, self.num_units) / 8
 
-            outputs = torch.sum(mem_value * weights.unsqueeze(-1), dim=1)  # s_b * num_units * d
+            outputs = torch.sum(mem_outputs * weights.unsqueeze(-1), dim=1)  # s_b * num_units * d
             return attention, weights, outputs
 
     def extra_repr(self) -> str:

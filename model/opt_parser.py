@@ -10,9 +10,6 @@ def parse_opt():
     parser.add_argument('--early_stop', type=int, default=1e10,
                         help='to save model')
 
-    parser.add_argument('--dir',
-                        help='the save dictionary')
-
     parser.add_argument('--epochs', default=20, type=int,
                         help='epochs')
 
@@ -52,7 +49,7 @@ def parse_opt():
     parser.add_argument('--attention_mask_p', default=0., type=float,
                         help='random mask some memory to avoid over-fitting')
 
-    parser.add_argument('--outputs_mix', default=0.5, type=float,
+    parser.add_argument('--outputs_mix', default=0.0, type=float,
                         help='the mix ratio between att_outputs and enc_outputs')
 
     # parser.add_argument('--reward_gamma', default=0.88,

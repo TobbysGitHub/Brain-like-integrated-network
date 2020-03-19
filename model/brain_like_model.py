@@ -1,9 +1,11 @@
 from datetime import datetime
 
+import torch
 from torch import nn as nn
 
-from model.cortex import Cortex
 from model.hippocampus import Hippocampus
+from model.modules.aggregator import Aggregator
+from model.modules.encoder import Encoder
 
 
 class Model(nn.Module):
@@ -16,17 +18,26 @@ class Model(nn.Module):
         self.dim_attention_unit = opt.dim_attention_unit
         self.len_attention_memory = opt.batch_size
         self.num_attention_groups = opt.num_attention_groups
-        self.cortex = Cortex(num_units_regions=opt.num_units_regions,
-                             dim_unit=opt.dim_unit,
-                             dim_hid_enc_unit=opt.dim_hid_enc_unit,
-                             dim_hid_agg_unit=opt.dim_hid_agg_unit,
-                             max_bptt=opt.max_bptt,
-                             t_inter_region=opt.t_inter_region,
-                             t_intro_region=opt.t_intro_region,
-                             opt=opt)
+
+        self.dim_inputs = 4 * (96 * 96 + 4)
+
+        self.t_intro_region = opt.t_intro_region
+        self.t_inter_region = opt.t_inter_region
+        self.memory = []
+        self.mem_attention = None
+
+        self.encoder = Encoder(num_units_regions=opt.num_units_regions,
+                               dim_unit=opt.dim_unit,
+                               dim_hidden=opt.dim_hid_enc_unit)
+
+        self.aggregator = Aggregator(num_units_regions=opt.num_units_regions,
+                                     dim_unit=opt.dim_unit,
+                                     dim_hidden=opt.dim_hid_agg_unit,
+                                     dim_outputs_regions=self.encoder.dim_outputs_regions,
+                                     max_bptt=opt.max_bptt)
 
         self.hippocampus = Hippocampus(num_units_regions=opt.num_units_regions,
-                                       dim_inputs=self.cortex.dim_outputs,
+                                       dim_inputs=self.encoder.dim_outputs,
                                        dim_attention_global=opt.dim_attention_global,
                                        dim_attention_unit=opt.dim_attention_unit,
                                        num_attention_groups=opt.num_attention_groups,
@@ -34,6 +45,40 @@ class Model(nn.Module):
 
         self.timestamp = datetime.now().strftime('%b%d_%H-%M-%S')
         self.num_units = '_'.join([str(n) for n in self.num_units_regions])
+
+    def forward(self, inputs):
+        """
+        :param inputs: s_b * (4*96*96+4)
+        :param memory:
+        :return:
+        """
+        warm_up = len(self.memory) < max(self.t_intro_region, self.t_inter_region)
+        if warm_up:
+            enc_output_list = self.encoder(inputs) # [[s_b, n_u, d_u],]
+            self.memory.append(enc_output_list)
+            return None
+        else:
+            agg_output_list = self.aggregator(self.memory[-self.t_intro_region], self.memory[-self.t_inter_region]) # [[s_b, n_u, d_u],]
+            agg_outputs = torch.cat(agg_output_list, dim=1)
+            mem_outputs = torch.cat(self.memory[-1], dim=1)
+
+            if self.mem_attention is None:
+                self.mem_attention = self.hippocampus(agg_outputs)
+                return None
+
+            attention, weights, att_outputs = self.hippocampus(agg_outputs, (self.mem_attention, mem_outputs))
+            self.mem_attention = attention
+            enc_output_list = self.encoder(inputs, att_outputs)
+            enc_outputs = torch.cat(enc_output_list, dim=1)
+
+            self.memory.append(enc_output_list)
+            self.memory.pop(0)
+            return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights
+
+    def reset(self):
+        self.memory.clear()
+        self.mem_attention = None
+        self.aggregator.reset()
 
     def extra_repr(self) -> str:
         return 'model__unit_n{num_units}_d{dim_unit}_' \

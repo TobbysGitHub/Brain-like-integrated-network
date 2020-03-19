@@ -4,7 +4,7 @@ from torch import nn
 from model.modules.components.unit_wise_linear import UnitWiseLinear
 
 
-class Encoder(nn.Module):
+class EncoderRegion(nn.Module):
 
     def __init__(self, num_units, dim_inputs, dim_hidden, dim_unit):
         super().__init__()
@@ -34,9 +34,58 @@ class Encoder(nn.Module):
 
     def extra_repr(self) -> str:
         return 'num_units:{num_units}, ' \
+               'dim_inputs:{dim_inputs}, ' \
+               'dim_outputs:{dim_outputs}'.format(**self.__dict__)
+
+
+class Encoder(nn.Module):
+    def __init__(self,
+                 num_units_regions,
+                 dim_unit,
+                 dim_hidden):
+        super().__init__()
+        self.dim_inputs = 4 * (96 * 96 + 4)
+        self.num_units_regions = num_units_regions
+        self.dim_unit = dim_unit
+        self.dim_hidden = dim_hidden
+
+        self.linear = nn.Linear(self.dim_inputs, 256)
+        self.region_list = nn.ModuleList()
+
+        for i, num_units in enumerate(self.num_units_regions):
+            if i == 0:
+                dim_inputs = 256
+            else:
+                dim_inputs = self.region_list[i - 1].dim_outputs
+            self.region_list.append(EncoderRegion(num_units=num_units,
+                                                  dim_unit=dim_unit,
+                                                  dim_inputs=dim_inputs,
+                                                  dim_hidden=dim_hidden))
+        self.dim_outputs_regions = [enc.dim_outputs for enc in self.region_list]
+        self.dim_outputs = sum(self.dim_outputs_regions)
+
+    def forward(self, inputs, att_outputs=None):
+        if att_outputs is not None:
+            att_outputs = att_outputs.detach()
+            att_output_list = torch.split(att_outputs, self.num_units_regions, dim=1)
+
+        result = []
+        inputs = inputs.detach()
+        x = self.linear(inputs)
+
+        for enc in self.region_list:
+            x = enc(x)
+            result.append(x)
+            x = x.detach()
+
+        return result
+
+    def extra_repr(self) -> str:
+        return 'num_units_regions:{num_units_regions}, ' \
+               'dim_outputs_regions:{dim_outputs_regions}' \
+               'dim_hidden:{dim_hidden}, ' \
                'dim_unit:{dim_unit}, ' \
                'dim_inputs:{dim_inputs}, ' \
-               'dim_hidden:{dim_hidden}, ' \
                'dim_outputs:{dim_outputs}'.format(**self.__dict__)
 
 

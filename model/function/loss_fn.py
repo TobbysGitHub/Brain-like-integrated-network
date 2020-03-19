@@ -65,13 +65,9 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     # background_loss = torch.mean(enc_agg_dists - agg_neg_dist)
     # background_loss = 0.5 * torch.mean(squash(enc_agg_dists / enc_neg_dist) + squash(enc_agg_dists / agg_neg_dist))
 
-    tb.add_scalar(agg_neg_dist=agg_neg_dist.mean(),
-                  agg_neg_w_dist=agg_neg_w_dist.mean(),
-                  enc_att_dist=enc_att_dists.mean(),
-                  enc_enc_dist=enc_enc_dists.mean(),
-                  enc_agg_dist=enc_agg_dists.mean(),
-                  background_loss=background_loss,
-                  weight_loss=weight_loss)
+    tb.add_scalar(
+        background_loss=background_loss,
+        weight_loss=weight_loss)
 
     return weight_loss, background_loss
 
