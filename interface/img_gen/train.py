@@ -44,7 +44,7 @@ def train_batch(gen_net, batch, optim, mode, state):
 def train(gen_net, model, optim, opt, model_opt, state):
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file='car-racing.32', shuffle=True)
 
-    for epoch in tqdm(range(opt.epochs), mininterval=2, leave=True):
+    for epoch in range(opt.epochs):
         batch_gen = gen_batch(model, data_loader, opt.batch_size)
 
         for batch in batch_gen:

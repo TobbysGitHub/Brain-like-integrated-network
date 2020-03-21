@@ -78,7 +78,7 @@ def collate_fn0(batch):
     batch = batch.unfold(dimension=3, size=4, step=1)  # batch_size * 16 * (96*96+4) * 256 * 4
     batch = batch.permute(3, 0, 1, 4, 2)
     batch = batch.contiguous().view(256, batch_size * 16, 4 * (96 * 96 + 4))  # frames256 * parallels * dim_inputs
-    return batch
+    return batch.to(device)
 
 
 def collate_fn1(batch):
@@ -98,7 +98,7 @@ def collate_fn1(batch):
     batch = batch.permute(3, 0, 1, 2)
     batch = batch.contiguous().view(259, batch_size * 16, (96 * 96 + 4))  # frames259 * parallels * dim_inputs//4
 
-    return iter_frame(batch)
+    return iter_frame(batch.to(device))
 
 
 def iter_frame(batch):
@@ -112,12 +112,12 @@ def iter_frame(batch):
 
 
 def prepare_data_loader(batch_size, file='car-racing.64', shuffle=True):
-    data = load(DATA_DIR, file).float().to(device)
+    data = load(DATA_DIR, file).float()
     assert batch_size % 16 == 0
     data_loader = DataLoader(dataset=data,
                              batch_size=batch_size // 16,
                              shuffle=shuffle,
-                             collate_fn=collate_fn0,
+                             collate_fn=collate_fn1,
                              drop_last=True)
 
     return data_loader
@@ -160,10 +160,8 @@ def train_batch(batch, model, optimizers, state):
 
 
 def train(model, data_loader, optimizers, epochs, state):
-    desc = '  - (Training epoch)'
-    for epoch in tqdm(range(epochs), mininterval=2, desc=desc, leave=True):
-        desc = '  - (Training batch)'
-        for batch in tqdm(data_loader, mininterval=2, desc=desc, leave=False):
+    for epoch in range(epochs):
+        for batch in data_loader:
             train_batch(batch, model, optimizers, state)
             if state.early_stop:
                 return
