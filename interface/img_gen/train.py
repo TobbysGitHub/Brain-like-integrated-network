@@ -1,14 +1,9 @@
-import os
-
 import torch
-from torch.utils.data import Dataset, DataLoader
 import torchvision.utils as utils
 import torch.nn.functional as F
-from tqdm import tqdm
+import numpy as np
 
-import matplotlib.pyplot as plt
-
-from dirs.dirs import MODEL_DOMAIN_DIR, INTERFACE_RUNS_DIR, DATA_DIR
+from dirs.dirs import *
 from interface.img_gen import opt_parser
 from interface.img_gen.image_gen_net import ImageGenNet
 from interface.img_gen.prepare.prepare_data import gen_batch
@@ -29,14 +24,18 @@ def train_batch(gen_net, batch, optim, mode, state):
     img, *inputs = batch
     state.steps += 1
     outputs = gen_net(inputs[mode])
-    loss = F.mse_loss(img, outputs.view_as(img))
+
+    img = img.view(-1, 96, 96)[:, :-12, :]
+    outputs = outputs.view(-1, 96, 96)[:, :-12, :]
+
+    loss = F.mse_loss(img, outputs)
 
     optim.zero_grad()
     loss.backward()
     optim.step()
 
     if mode == 0:
-        tb.add_scalar(loss0=loss.item())
+        tb.add_scalar(loss=loss.item())
     else:
         tb.add_scalar(loss1=loss.item())
 
@@ -62,13 +61,38 @@ def visualize(gen_net, model, model_opt, mode, file, nrow=8):
     img, img_gen = img.view(num, -1), img_gen.view(num, -1)
 
     img = torch.stack([img, img_gen], dim=1).view(-1, 1, 96, 96) \
-        .expand(-1, 3, -1, -1) \
-        .view(num // 8, 8, 2, 3, 96, 96) \
-        .transpose(2, 1) \
-        .contiguous() \
-        .view(-1, 3, 96, 96)
+              .expand(-1, 3, -1, -1) \
+              .view(num // 8, 8, 2, 3, 96, 96) \
+              .transpose(2, 1) \
+              .contiguous() \
+              .view(-1, 3, 96, 96)[:, :, :-12, :]
 
-    utils.save_image(img, file, nrow=nrow, normalize=True, scale_each=True)
+    torch.save(img, file)
+    utils.save_image(img, file + '.png', nrow=nrow, normalize=True)
+    img = utils.make_grid(img, nrow=nrow, normalize=True)
+    tb.writer.add_image(file, img)
+
+
+def eval(gen_net, model, model_opt, mode):
+    data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file='car-racing.16', shuffle=False)
+    batch_gen = gen_batch(model, data_loader, 32)
+    loss = []
+
+    for batch in batch_gen:
+        img, *inputs = batch
+        outputs = gen_net(inputs[mode])
+
+        img = img.view(-1, 96, 96)[:, :-12, :]
+        outputs = outputs.view(-1, 96, 96)[:, :-12, :]
+
+        loss.append(F.mse_loss(img, outputs).item())
+
+    loss = np.mean(loss)
+
+    if mode == 0:
+        tb.writer.add_text('eval_loss', str(loss))
+    else:
+        tb.writer.add_text('eval_loss1', str(loss))
 
 
 def main():
@@ -84,7 +108,7 @@ def main():
         dim_inputs = model.encoder.dim_outputs
     gen_net = ImageGenNet(dim_inputs).to(device)
     state = TrainState(0)
-    tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(INTERFACE_RUNS_DIR, opt.model_repr))
+    tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(MODEL_RUNS_DIR, opt.model_repr))
 
     optim = torch.optim.Adam(gen_net.parameters(), lr=1e-3)
 
@@ -92,7 +116,8 @@ def main():
 
     with torch.no_grad():
         visualize(gen_net, model, model_opt=model_opt, mode=opt.mode,
-                  file='{}/{}/image_gen{}.png'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode))
+                  file='{}/{}/image_gen{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode))
+        eval(gen_net, model, model_opt=model_opt, mode=opt.mode)
 
 
 if __name__ == '__main__':
