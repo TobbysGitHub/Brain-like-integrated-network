@@ -31,15 +31,16 @@ class TrainingState:
         self.inc = 0
 
     def loss(self, loss):
+        self.total += 1
         if loss < self.min_loss:
             self.min_loss = loss
             self.inc = 0
+            return True
         else:
             self.inc += 1
-
-        self.total += 1
-        if self.total > 10 and self.inc >= self.early_stop_steps:
-            self.early_stop = True
+            if self.total > 10 and self.inc >= self.early_stop_steps:
+                self.early_stop = True
+            return False
 
 
 def load(dir, file_name):
@@ -156,8 +157,8 @@ def train_batch(batch, model, optimizers, state):
         sum_loss += loss.item()
         counter += 1
 
-    state.loss(sum_loss / counter)
-    save(model, state.steps)
+    if state.loss(sum_loss / counter):
+        save(model, state.steps)
 
 
 def train(model, data_loader, optimizers, epochs, state):
