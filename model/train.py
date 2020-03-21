@@ -22,9 +22,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TrainingState:
-    def __init__(self, steps):
+    def __init__(self, steps, early_stop_steps):
         self.steps = steps
         self.min_loss = np.inf
+        self.early_stop_steps = early_stop_steps
         self.early_stop = False
         self.total = 0
         self.inc = 0
@@ -37,7 +38,7 @@ class TrainingState:
             self.inc += 1
 
         self.total += 1
-        if self.total > 10 and self.inc >= 4:
+        if self.total > 10 and self.inc >= self.early_stop_steps:
             self.early_stop = True
 
 
@@ -183,7 +184,7 @@ def main():
         model.load_state_dict(torch.load(opt.state_dict, map_location=device))
         state = TrainingState(int(opt.state_dict.split('.')[-1]))
     else:
-        state = TrainingState(0)
+        state = TrainingState(0, opt.early_stop)
 
     tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(MODEL_RUNS_DIR, model.extra_repr()))
 

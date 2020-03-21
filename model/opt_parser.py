@@ -7,8 +7,7 @@ def parse_opt():
     parser.add_argument('--state_dict',
                         help='model state_dict')
 
-    parser.add_argument('--early_stop', type=int, default=1e10,
-                        help='to save model')
+    parser.add_argument('--early_stop', type=int, default=1e8)
 
     parser.add_argument('--epochs', default=20, type=int,
                         help='epochs')
