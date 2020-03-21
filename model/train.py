@@ -30,6 +30,9 @@ class TrainingState:
         self.total = 0
         self.inc = 0
 
+        self.epoch = 0
+        self.batch = 0
+
     def loss(self, loss):
         self.total += 1
         if loss < self.min_loss:
@@ -145,7 +148,7 @@ def train_batch(batch, model, optimizers, state):
     counter = 0
 
     model.reset()
-    desc = '  - (Training frames)'
+    desc = '  - (Training epoch:{}/batch:{})'.format(state.epoch, state.batch)
     for inputs in tqdm(batch, mininterval=2, desc=desc, leave=False, total=256):
         state.steps += 1
         results = model(inputs)
@@ -167,9 +170,11 @@ def train(model, data_loader, optimizers, epochs, state):
             train_batch(batch, model, optimizers, state)
             if state.early_stop:
                 return
+            state.batch += 1
 
         if state.early_stop:
             return
+        state.epoch += 1
 
 
 def main():
