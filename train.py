@@ -30,3 +30,7 @@ def train(num_units_regions=None,
 
     sys.argv = argv
     interface.img_gen.train.main()
+
+
+if __name__ == '__main__':
+    train()

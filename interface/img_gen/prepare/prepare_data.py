@@ -14,7 +14,7 @@ def gen_batch(model, data_loader, batch_size):
                 results = model(inputs)
                 if results is None:
                     continue
-                if index < 60 or not index % 10 == 0:
+                if index < 24 or not index % 7 == 0:
                     continue
                 inputs_size = inputs.shape[0]
                 (enc_outputs, agg_outputs, *_), *_ = results

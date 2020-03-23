@@ -5,10 +5,11 @@ import numpy as np
 
 import torch
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from dirs.dirs import MODEL_DOMAIN_DIR, DATA_DIR, MODEL_RUNS_DIR
+from dataset.dataset import prepare_data_loader
+from dirs.delete_data import delete_data
+from dirs.dirs import MODEL_DOMAIN_DIR, MODEL_RUNS_DIR
 from model import opt_parser
 from model.function.flip_grad import flip_grad
 from model.function.loss_fn import contrastive_loss
@@ -46,10 +47,6 @@ class TrainingState:
             return False
 
 
-def load(dir, file_name):
-    return torch.load(os.path.join(dir, file_name))
-
-
 def save(model, steps):
     dir = '{}/{}'.format(MODEL_DOMAIN_DIR, model.extra_repr())
     if not os.path.exists(dir):
@@ -65,67 +62,6 @@ def save(model, steps):
     torch.save(model.opt, f=f_opt)
     if f_old is not None and os.path.dirname(f_old) == os.path.dirname(f_model):
         os.remove(f_old)
-
-
-def collate_fn0(batch):
-    """
-
-    :batch: batch_size * 512 * (96*96+4)
-    """
-    batch = torch.stack(batch).float()
-    batch_size = batch.shape[0]
-    assert batch.shape == (batch_size, 512, 96 * 96 + 4)
-    # trim the first 13 frames for length alignment
-    batch = batch[:, -499:, :]  # batch_size * 499 * (96 * 96 + 4)
-    # (sizedim - size) / step + 1 = (499 - 259) // 16 + 1 =16
-    batch = batch.unfold(dimension=1, size=259, step=16)  # batch_size * 16 * (96*96+4) * 259
-    # (259 - 4)//1 + 1 = 256
-    batch = batch.unfold(dimension=3, size=4, step=1)  # batch_size * 16 * (96*96+4) * 256 * 4
-    batch = batch.permute(3, 0, 1, 4, 2)
-    batch = batch.contiguous().view(256, batch_size * 16, 4 * (96 * 96 + 4))  # frames256 * parallels * dim_inputs
-    return batch.to(device)
-
-
-def collate_fn1(batch):
-    """
-
-    :batch: batch_size * 512 * (96*96+4)
-    """
-    batch = torch.stack(batch).float()
-    batch_size = batch.shape[0]
-    assert batch.shape == (batch_size, 512, 96 * 96 + 4)
-    # trim the first 13 frames for length alignment
-    batch = batch[:, -499:, :]  # batch_size * 499 * (96 * 96 + 4)
-    # (sizedim - size) / step + 1 = (499 - 259) // 16 + 1 =16
-    batch = batch.unfold(dimension=1, size=259, step=16)  # batch_size * 16 * (96*96+4) * 259
-    # # (259 - 4)//1 + 1 = 256
-    # batch = batch.unfold(dimension=3, size=4, step=1)  # batch_size * 16 * (96*96+4) * 256 * 4
-    batch = batch.permute(3, 0, 1, 2)
-    batch = batch.contiguous().view(259, batch_size * 16, (96 * 96 + 4))  # frames259 * parallels * dim_inputs//4
-
-    return iter_frame(batch.to(device))
-
-
-def iter_frame(batch):
-    frames = []
-    for i, frame in enumerate(batch):
-        frames.append(frame)
-        if len(frames) < 4:
-            continue
-        yield torch.cat(frames, dim=-1)
-        frames.pop(0)
-
-
-def prepare_data_loader(batch_size, file='car-racing.64', shuffle=True):
-    data = load(DATA_DIR, file).float()
-    assert batch_size % 16 == 0
-    data_loader = DataLoader(dataset=data,
-                             batch_size=batch_size // 16,
-                             shuffle=shuffle,
-                             collate_fn=collate_fn1,
-                             drop_last=True)
-
-    return data_loader
 
 
 def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights):
@@ -160,8 +96,7 @@ def train_batch(batch, model, optimizers, state):
         sum_loss += loss.item()
         counter += 1
 
-    if state.loss(sum_loss / counter):
-        save(model, state.steps)
+    state.loss(sum_loss / counter)
 
 
 def train(model, data_loader, optimizers, epochs, state):
@@ -185,24 +120,29 @@ def main():
 
     # opt.state_dict = '{}/model__unit_n8_d8_@d16_@unit_d4_@mem256_@groups8_Mar10_21-00-02/model_state_dict.15150' \
     #     .format(MODEL_DOMAIN_DIR)
+    try:
+        if opt.state_dict is not None:
+            model.load_state_dict(torch.load(opt.state_dict, map_location=device))
+            state = TrainingState(int(opt.state_dict.split('.')[-1]))
+        else:
+            state = TrainingState(0, opt.early_stop)
 
-    if opt.state_dict is not None:
-        model.load_state_dict(torch.load(opt.state_dict, map_location=device))
-        state = TrainingState(int(opt.state_dict.split('.')[-1]))
-    else:
-        state = TrainingState(0, opt.early_stop)
+        tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(MODEL_RUNS_DIR, model.extra_repr()))
 
-    tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(MODEL_RUNS_DIR, model.extra_repr()))
+        optimizers = [optim.Adam([dict(params=model.encoder.parameters(), lr=1e-4),
+                                  dict(params=model.aggregator.parameters(), lr=1e-3)]),
+                      optim.Adam(model.hippocampus.parameters(), lr=1e-3),
+                      ]
 
-    optimizers = [optim.Adam([dict(params=model.encoder.parameters(), lr=1e-4),
-                              dict(params=model.aggregator.parameters(), lr=1e-3)]),
-                  optim.Adam(model.hippocampus.parameters(), lr=1e-3),
-                  ]
+        data_loader = prepare_data_loader(batch_size=opt.batch_size)
 
-    data_loader = prepare_data_loader(batch_size=opt.batch_size)
-
-    save(model, state.steps)
-    train(model, data_loader, optimizers, opt.epochs, state)
+        save(model, state.steps)
+        train(model, data_loader, optimizers, opt.epochs, state)
+        save(model, state.steps)
+    except BaseException as e:
+        delete_data(model.extra_repr())
+        print(1)
+        raise e
 
     return model.extra_repr()
 

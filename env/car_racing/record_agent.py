@@ -7,7 +7,7 @@ import time
 from collections import deque
 
 # from agent import Agent
-from dirs import DATA_DIR
+from dirs.dirs import DATA_DIR
 from env.car_racing.agent import Agent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
