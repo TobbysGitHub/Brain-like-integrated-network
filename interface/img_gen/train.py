@@ -54,18 +54,20 @@ def visualize(gen_net, model, model_opt, mode, file, nrow=8):
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file='car-racing.16', shuffle=False)
     batch_gen = gen_batch(model, data_loader, 32)
 
-    img, *inputs = next(batch_gen.__iter__())
+    for img, *inputs in batch_gen:
+        break
+
     img_gen = gen_net(inputs[mode])
 
     num = img.shape[0]
     img, img_gen = img.view(num, -1), img_gen.view(num, -1)
 
     img = torch.stack([img, img_gen], dim=1).view(-1, 1, 96, 96) \
-              .expand(-1, 3, -1, -1) \
-              .view(num // 8, 8, 2, 3, 96, 96) \
-              .transpose(2, 1) \
-              .contiguous() \
-              .view(-1, 3, 96, 96)
+        .expand(-1, 3, -1, -1) \
+        .view(num // 8, 8, 2, 3, 96, 96) \
+        .transpose(2, 1) \
+        .contiguous() \
+        .view(-1, 3, 96, 96)
 
     torch.save(img, file)
     utils.save_image(img, file + '.png', nrow=nrow, normalize=True)

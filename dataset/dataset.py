@@ -48,12 +48,15 @@ def collate_fn1(batch):
 
 
 def iter_frame(batch):
+    """
+    :param batch: 256 * batch_size * (96*96+4)
+    """
     frames = []
     for i, frame in enumerate(batch):
         frames.append(frame)
         if len(frames) < 4:
             continue
-        yield torch.cat(frames, dim=-1)
+        yield torch.cat(frames, dim=-1)  # batch_size * (4*(96*96+4))
         frames.pop(0)
 
 
@@ -65,17 +68,17 @@ class DataSet(Dataset):
         self.data = load(DATA_DIR, file).float()
 
     def __getitem__(self, item):
-        index0 = item % len(self.data)
-        index1 = item // len(self.data) * 16
+        index0 = item // 16
+        index1 = item % 16 * 16
 
-        return self.data[index0, index1:index1 + 256]
+        return self.data[index0, index1:index1 + 256]  # 256 * (96*96+4)
 
     def __len__(self):
         return len(self.data) * 16
 
 
 def collate_fn(batch):
-    batch = torch.stack(batch)
+    batch = torch.stack(batch, dim=1)  # 256 * batch_size
     return iter_frame(batch.to(device))
 
 
