@@ -65,16 +65,24 @@ def save(model, steps):
 
 
 def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights):
-    cortex_loss, background_loss = contrastive_loss(enc_outputs, agg_outputs, att_outputs, mem_outputs, weights)
-    optimizers[0].zero_grad()
-    optimizers[1].zero_grad()
+    cortex_loss, background_loss, enc_agg_loss = contrastive_loss(enc_outputs, agg_outputs, att_outputs, mem_outputs,
+                                                                  weights)
+    for opti in optimizers:
+        opti.zero_grad()
+
+    if background_loss > 0.6:
+        enc_agg_loss.backward(retain_graph=True)
+        optimizers[1].step()
+        return background_loss
+
     cortex_loss.backward(retain_graph=True)
     # background_loss.backward(retain_graph=True)
     optimizers[0].step()
+    optimizers[1].step()
     # hippocampus_loss = - cortex_loss
     # hippocampus_loss.backward(retain_graph=True)
-    flip_grad(optimizers[1])
-    optimizers[1].step()
+    flip_grad(optimizers[2])
+    optimizers[2].step()
 
     return background_loss
 
@@ -129,8 +137,8 @@ def main():
 
         tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(MODEL_RUNS_DIR, model.extra_repr()))
 
-        optimizers = [optim.Adam([dict(params=model.encoder.parameters(), lr=1e-4),
-                                  dict(params=model.aggregator.parameters(), lr=1e-3)]),
+        optimizers = [optim.Adam(model.encoder.parameters(), lr=1e-4),
+                      optim.Adam(model.aggregator.parameters(), lr=1e-3),
                       optim.Adam(model.hippocampus.parameters(), lr=1e-3),
                       ]
 

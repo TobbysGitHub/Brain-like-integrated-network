@@ -76,7 +76,7 @@ class DataSet(Dataset):
 
 def collate_fn(batch):
     batch = torch.stack(batch)
-    return batch.to(device)
+    return iter_frame(batch.to(device))
 
 
 def prepare_data_loader(batch_size, file='car-racing.64', shuffle=True):
@@ -84,14 +84,14 @@ def prepare_data_loader(batch_size, file='car-racing.64', shuffle=True):
                              batch_size=batch_size,
                              shuffle=shuffle,
                              collate_fn=collate_fn,
-                             num_workers=3,
+                             # num_workers=3,
                              drop_last=True)
 
-    class Wrapper:
-        def __init__(self, data_loader):
-            self.data_loader = data_loader
+    # class Wrapper:
+    #     def __init__(self, data_loader):
+    #         self.data_loader = data_loader
+    #
+    #     def __iter__(self):
+    #         return iter_frame(data_loader.__iter__())
 
-        def __iter__(self):
-            return iter_frame(data_loader.__iter__())
-
-    return Wrapper(data_loader)
+    return data_loader

@@ -32,6 +32,7 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     # enc_agg_cos_dists = cos_distance(enc_outputs, agg_outputs)  # batch_size * n_units
     enc_agg_dists = distance(enc_outputs, agg_outputs)  # batch_size * n_units
     enc_att_dists = distance(enc_outputs, att_outputs)  # batch_size * n_units
+    enc_att_dists = distance(enc_outputs, att_outputs)  # batch_size * n_units
     # enc_neg_dists = distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
     # todo
     # agg_neg_sin_dists = sin_distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
@@ -42,6 +43,7 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
                  # enc_neg_dists=enc_neg_dists,
                  # enc_agg_cos_dists=enc_agg_cos_dists,
                  enc_agg_dists=enc_agg_dists,
+                 enc_att_dists=enc_att_dists,
                  agg_neg_dists=agg_neg_dists,
                  weights_max=None if weights is None else weights.max(1)[0])
     # agg_neg_sin_dists=agg_neg_sin_dists)
@@ -69,7 +71,7 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
         background_loss=background_loss,
         weight_loss=weight_loss)
 
-    return weight_loss, background_loss
+    return weight_loss, background_loss, enc_agg_dists.mean()
 
 
 def cosine_loss(x1, x2):
