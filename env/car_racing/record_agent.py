@@ -143,7 +143,7 @@ load(agent, 'env/car_racing/dir_chk', 'model_weights_820-980.pth')
 ZOOM_FRAMES = 50
 
 
-def gen_data(n_episodes, steps=512, min_score=800):
+def gen_data(n_episodes, f=None, steps=512, min_score=800):
     if not steps == -1:
         min_steps = steps + 200
     else:
@@ -160,13 +160,14 @@ def gen_data(n_episodes, steps=512, min_score=800):
                 results.append(result)
     results = torch.stack(results)
 
-    save(results, DATA_DIR, 'car-racing.{}'.format(n_episodes))
+    if f is None:
+        f = 'car-racing.{}'.format(n_episodes)
+    save(results, DATA_DIR, f)
 
-
-gen_data(1, steps=-1)
-gen_data(16)
-gen_data(32)
-gen_data(64)
 
 if __name__ == '__main__':
+    gen_data(1, steps=-1)
+    gen_data(16)
+    gen_data(32)
+    gen_data(64)
     pass
