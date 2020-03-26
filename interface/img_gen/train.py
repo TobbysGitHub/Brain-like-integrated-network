@@ -41,7 +41,11 @@ def train_batch(gen_net, batch, optim, mode, state):
 
 
 def train(gen_net, model, optim, opt, model_opt, state):
-    data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file='car-racing.64', shuffle=True)
+    file = model_opt.data_file + '.train'
+    data_loader = prepare_data_loader(batch_size=model_opt.batch_size,
+                                      file=file,
+                                      rotations=model_opt.rotations,
+                                      shuffle=True)
 
     for epoch in range(opt.epochs):
         batch_gen = gen_batch(model, data_loader, opt.batch_size)
@@ -50,39 +54,49 @@ def train(gen_net, model, optim, opt, model_opt, state):
             train_batch(gen_net, batch, optim, opt.mode, state)
 
 
-def visualize(gen_net, model, model_opt, mode, file, nrow=8):
-    data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file='car-racing.16', shuffle=False)
-    batch_gen = gen_batch(model, data_loader, 32)
+def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
+    file = model_opt.data_file + '.eval'
+    data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
+                                      rotations=model_opt.rotations,
+                                      shuffle=False)
+    num_rotations = len(model_opt.rotations)
+    num_max = displays * num_rotations
+    batch_gen = gen_batch(model, data_loader, batch_size=num_max)
 
     for img, *inputs in batch_gen:
         break
 
-    img_gen = gen_net(inputs[mode])
+    img_gen = gen_net(inputs[opt.mode])
 
-    num = img.shape[0]
-    img, img_gen = img.view(num, -1), img_gen.view(num, -1)
+    for i in range(num_rotations):
+        img_i = img[i::num_rotations]
+        img_gen_i = img_gen[i::num_rotations]
 
-    img = torch.stack([img, img_gen], dim=1).view(-1, 1, 96, 96) \
-        .expand(-1, 3, -1, -1) \
-        .view(num // 8, 8, 2, 3, 96, 96) \
-        .transpose(2, 1) \
-        .contiguous() \
-        .view(-1, 3, 96, 96)
+        imgs = torch.stack([img_i, img_gen_i], dim=1).view(-1, 1, 96, 96) \
+            .expand(-1, 3, -1, -1) \
+            .view(displays // 8, 8, 2, 3, 96, 96) \
+            .transpose(2, 1) \
+            .contiguous() \
+            .view(-1, 3, 96, 96)
 
-    torch.save(img, file)
-    utils.save_image(img, file + '.png', nrow=nrow, normalize=True)
-    img = utils.make_grid(img, nrow=nrow, normalize=True)
-    tb.writer.add_image(file, img)
+        file = '{}/{}{}_{}'.format(dir, model_opt.data_file, str(opt.mode), model_opt.rotations[i])
+        torch.save(imgs, file)
+        utils.save_image(imgs, file + '.png', nrow=nrow, normalize=True)
+        grid_img = utils.make_grid(imgs, nrow=nrow, normalize=True)
+        tb.writer.add_image(file, grid_img)
 
 
-def eval(gen_net, model, model_opt, mode):
-    data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file='car-racing.16', shuffle=False)
-    batch_gen = gen_batch(model, data_loader, 32)
+def eval(gen_net, model, opt, model_opt):
+    file = model_opt.data_file + '.eval'
+    data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
+                                      rotations=model_opt.rotations,
+                                      shuffle=True)
+    batch_gen = gen_batch(model, data_loader, opt.batch_size)
     loss = []
 
     for batch in batch_gen:
         img, *inputs = batch
-        outputs = gen_net(inputs[mode])
+        outputs = gen_net(inputs[opt.mode])
 
         img = img.view(-1, 96, 96)
         outputs = outputs.view(-1, 96, 96)
@@ -91,7 +105,7 @@ def eval(gen_net, model, model_opt, mode):
 
     loss = np.mean(loss)
 
-    if mode == 0:
+    if opt.mode == 0:
         tb.writer.add_text('eval_loss', str(loss))
     else:
         tb.writer.add_text('eval_loss1', str(loss))
@@ -117,9 +131,10 @@ def main():
     train(gen_net, model, optim, opt, model_opt, state)
 
     with torch.no_grad():
-        visualize(gen_net, model, model_opt=model_opt, mode=opt.mode,
-                  file='{}/{}/image_gen{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode))
-        eval(gen_net, model, model_opt=model_opt, mode=opt.mode)
+        dir = '{}/{}/'.format(MODEL_DOMAIN_DIR, opt.model_repr)
+        visualize(gen_net, model, opt=opt, model_opt=model_opt, dir=dir)
+        # file='{}/{}/image_gen{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode))
+        eval(gen_net, model, opt=opt, model_opt=model_opt)
 
 
 if __name__ == '__main__':

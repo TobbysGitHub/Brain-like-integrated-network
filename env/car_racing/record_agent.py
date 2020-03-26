@@ -166,8 +166,9 @@ def gen_data(n_episodes, f=None, steps=512, min_score=800):
 
 
 if __name__ == '__main__':
-    gen_data(1, steps=-1)
-    gen_data(16)
-    gen_data(32)
-    gen_data(64)
+    # gen_data(1, steps=-1)
+    # gen_data(16)
+    # gen_data(32)
+    gen_data(64, f='car-racing.64.train')
+    gen_data(64, f='car-racing.64.eval')
     pass

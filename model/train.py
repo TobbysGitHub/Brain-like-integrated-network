@@ -60,7 +60,9 @@ def save(model, steps):
     opt.state_dict = f_model
     f_opt = '{}/opt'.format(dir)
     torch.save(model.opt, f=f_opt)
-    if f_old is not None and os.path.dirname(f_old) == os.path.dirname(f_model):
+    if f_old is not None \
+            and not f_old == f_model \
+            and os.path.dirname(f_old) == os.path.dirname(f_model):
         os.remove(f_old)
 
 
@@ -142,14 +144,15 @@ def main():
                       optim.Adam(model.hippocampus.parameters(), lr=1e-3),
                       ]
 
-        data_loader = prepare_data_loader(batch_size=opt.batch_size)
+        file = opt.data_file + '.train'
+        data_loader = prepare_data_loader(batch_size=opt.batch_size, file=file, rotations=opt.rotations)
 
         save(model, state.steps)
         train(model, data_loader, optimizers, opt.epochs, state)
         save(model, state.steps)
     except BaseException as e:
         delete_data(model.extra_repr())
-        print(1)
+        print('failed !!!')
         raise e
 
     return model.extra_repr()

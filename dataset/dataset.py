@@ -1,50 +1,11 @@
 import os
 
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, Sampler
 
 from dirs.dirs import DATA_DIR
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def collate_fn0(batch):
-    """
-
-    :batch: batch_size * 512 * (96*96+4)
-    """
-    batch = torch.stack(batch).float()
-    batch_size = batch.shape[0]
-    assert batch.shape == (batch_size, 512, 96 * 96 + 4)
-    # trim the first 13 frames for length alignment
-    batch = batch[:, -499:, :]  # batch_size * 499 * (96 * 96 + 4)
-    # (sizedim - size) / step + 1 = (499 - 259) // 16 + 1 =16
-    batch = batch.unfold(dimension=1, size=259, step=16)  # batch_size * 16 * (96*96+4) * 259
-    # (259 - 4)//1 + 1 = 256
-    batch = batch.unfold(dimension=3, size=4, step=1)  # batch_size * 16 * (96*96+4) * 256 * 4
-    batch = batch.permute(3, 0, 1, 4, 2)
-    batch = batch.contiguous().view(256, batch_size * 16, 4 * (96 * 96 + 4))  # frames256 * parallels * dim_inputs
-    return batch.to(device)
-
-
-def collate_fn1(batch):
-    """
-
-    :batch: batch_size * 512 * (96*96+4)
-    """
-    batch = torch.stack(batch).float()
-    batch_size = batch.shape[0]
-    assert batch.shape == (batch_size, 512, 96 * 96 + 4)
-    # trim the first 13 frames for length alignment
-    batch = batch[:, -499:, :]  # batch_size * 499 * (96 * 96 + 4)
-    # (sizedim - size) / step + 1 = (499 - 259) // 16 + 1 =16
-    batch = batch.unfold(dimension=1, size=259, step=16)  # batch_size * 16 * (96*96+4) * 259
-    # # (259 - 4)//1 + 1 = 256
-    # batch = batch.unfold(dimension=3, size=4, step=1)  # batch_size * 16 * (96*96+4) * 256 * 4
-    batch = batch.permute(3, 0, 1, 2)
-    batch = batch.contiguous().view(259, batch_size * 16, (96 * 96 + 4))  # frames259 * parallels * dim_inputs//4
-
-    return iter_frame(batch.to(device))
 
 
 def iter_frame(batch):
@@ -60,21 +21,76 @@ def iter_frame(batch):
         frames.pop(0)
 
 
-class DataSet(Dataset):
-    def __init__(self, file):
-        def load(dir, file_name):
-            return torch.load(os.path.join(dir, file_name))
+class RoundSampler(Sampler):
+    def __init__(self, data_source, rounds, shuffle=True):
+        super().__init__(data_source)
+        self.data_source = data_source
+        self.rounds = rounds
+        self.shuffle = shuffle
 
-        self.data = load(DATA_DIR, file).float()
+    def __iter__(self):
+        n = len(self.data_source) // self.rounds
 
-    def __getitem__(self, item):
-        index0 = item // 16
-        index1 = item % 16 * 16
+        if self.shuffle:
+            index_list = torch.stack([torch.randperm(n) * self.rounds + i for i in range(self.rounds)],
+                                     dim=-1).view(-1).tolist()
+        else:
+            index_list = torch.stack([torch.arange(n) * self.rounds + i for i in range(self.rounds)],
+                                     dim=-1).view(-1).tolist()
 
-        return self.data[index0, index1:index1 + 256]  # 256 * (96*96+4)
+        return iter(index_list)
 
     def __len__(self):
-        return len(self.data) * 16
+        return len(self.data_source)
+
+
+class RotatedDataSet(Dataset):
+    def __init__(self, file, rotations=None):
+        def load(dir, file_name):
+            return torch.load(os.path.join(dir, file_name), map_location=device)
+
+        self.data = load(DATA_DIR, file).float()
+        if not rotations:
+            self.rotations = [0]
+        else:
+            self.rotations = rotations
+
+    def __getitem__(self, item):
+        rotation = self.rotations[item % len(self.rotations)]
+        item = item // len(self.rotations)
+        i_episode = item // 16
+        offset = item % 16 * 16
+
+        item_data = self.data[i_episode, offset:offset + 256]
+
+        if not rotation == 0:
+            item_data = item_data.clone()
+            if rotation == 1:
+                item_data[:, :96 * 96] = item_data[:, :96 * 96] \
+                    .view(-1, 96, 96) \
+                    .transpose(1, 2) \
+                    .flip(dims=(-1,)) \
+                    .contiguous() \
+                    .view(-1, 96 * 96)
+            elif rotation == 2:
+                item_data[:, :96 * 96] = item_data[:, :96 * 96] \
+                    .view(-1, 96, 96) \
+                    .flip(dims=(1,)) \
+                    .contiguous() \
+                    .view(-1, 96 * 96)
+            elif rotation == 3:
+                item_data[:, :96 * 96] = item_data[:, :96 * 96] \
+                    .view(-1, 96, 96) \
+                    .transpose(1, 2) \
+                    .contiguous() \
+                    .view(-1, 96 * 96)
+            else:
+                raise ValueError()
+
+        return item_data  # 256 * (96*96+4)
+
+    def __len__(self):
+        return len(self.data) * len(self.rotations) * 16
 
 
 def collate_fn(batch):
@@ -82,19 +98,14 @@ def collate_fn(batch):
     return iter_frame(batch.to(device))
 
 
-def prepare_data_loader(batch_size, file='car-racing.64', shuffle=True):
-    data_loader = DataLoader(dataset=DataSet(file),
+def prepare_data_loader(batch_size, file, rotations, shuffle=True):
+    dataset = RotatedDataSet(file, rotations)
+    data_loader = DataLoader(dataset=dataset,
                              batch_size=batch_size,
-                             shuffle=shuffle,
+                             sampler=RoundSampler(data_source=dataset,
+                                                  rounds=len(dataset.rotations),
+                                                  shuffle=shuffle),
                              collate_fn=collate_fn,
-                             # num_workers=3,
                              drop_last=True)
-
-    # class Wrapper:
-    #     def __init__(self, data_loader):
-    #         self.data_loader = data_loader
-    #
-    #     def __iter__(self):
-    #         return iter_frame(data_loader.__iter__())
 
     return data_loader

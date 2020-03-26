@@ -45,6 +45,8 @@ class Model(nn.Module):
 
         self.timestamp = datetime.now().strftime('%b%d_%H-%M-%S')
         self.num_units = '_'.join([str(n) for n in self.num_units_regions])
+        self.data_file = opt.data_file
+        self.rotations = '_'.join([str(r) for r in opt.rotations])
 
     def forward(self, inputs):
         """
@@ -54,11 +56,12 @@ class Model(nn.Module):
         """
         warm_up = len(self.memory) < max(self.t_intro_region, self.t_inter_region)
         if warm_up:
-            enc_output_list = self.encoder(inputs) # [[s_b, n_u, d_u],]
+            enc_output_list = self.encoder(inputs)  # [[s_b, n_u, d_u],]
             self.memory.append(enc_output_list)
             return None
         else:
-            agg_output_list = self.aggregator(self.memory[-self.t_intro_region], self.memory[-self.t_inter_region]) # [[s_b, n_u, d_u],]
+            agg_output_list = self.aggregator(self.memory[-self.t_intro_region],
+                                              self.memory[-self.t_inter_region])  # [[s_b, n_u, d_u],]
             agg_outputs = torch.cat(agg_output_list, dim=1)
             mem_outputs = torch.cat(self.memory[-1], dim=1)
 
@@ -81,7 +84,8 @@ class Model(nn.Module):
         self.aggregator.reset()
 
     def extra_repr(self) -> str:
-        return 'model__unit_n{num_units}_d{dim_unit}_' \
+        return '{timestamp}_model__unit_n{num_units}_d{dim_unit}_' \
                '@d{dim_attention_global}_@unit_d{dim_attention_unit}_' \
-               '@mem{len_attention_memory}_@groups{num_attention_groups}_{timestamp}' \
+               '@mem{len_attention_memory}_@groups{num_attention_groups}_' \
+               'r{rotations}' \
             .format(**self.__dict__)

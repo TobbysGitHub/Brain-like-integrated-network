@@ -4,11 +4,18 @@ import model.train
 import interface.img_gen.train
 
 
-def train(num_units_regions=None,
+def train(rotations=None,
+          num_units_regions=None,
           dim_attention_global=None,
           epochs=None,
+          img_gen_opt_dict=None,
           **kwargs):
     argv = ['train']
+
+    if rotations is not None:
+        argv.append('--rotations')
+        for r in rotations:
+            argv.append(str(r))
 
     if num_units_regions is not None:
         argv.append('--num_units_regions')
@@ -27,10 +34,14 @@ def train(num_units_regions=None,
     model_name = model.train.main()
 
     argv = ['train', '--model_repr', model_name]
+    if img_gen_opt_dict is not None:
+        for k, v in img_gen_opt_dict.items():
+            argv.append('--' + k)
+            argv.append(str(v))
 
     sys.argv = argv
     interface.img_gen.train.main()
 
 
 if __name__ == '__main__':
-    train()
+    train(rotations=[0, 1], batch_size=256, epochs=0, img_gen_opt_dict=dict(epochs=0))

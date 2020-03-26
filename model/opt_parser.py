@@ -9,6 +9,12 @@ def parse_opt():
 
     parser.add_argument('--early_stop', type=int, default=1e8)
 
+    parser.add_argument('--data_file', type=str, default='car-racing.64',
+                        help='which data to train on')
+
+    parser.add_argument('--rotations', nargs='+', type=int, default=[0],
+                        help='')
+
     parser.add_argument('--epochs', default=20, type=int,
                         help='epochs')
 
@@ -18,7 +24,7 @@ def parse_opt():
     parser.add_argument('--num_units_regions', nargs='+', type=int, default=[8],
                         help='list of num of units in diff regions')
 
-    parser.add_argument('--dim_unit', default=8, type=int,
+    parser.add_argument('--dim_unit', default=2, type=int,
                         help='dim of the output of each unit')
 
     parser.add_argument('--dim_hid_enc_unit', default=32, type=int,
@@ -33,13 +39,13 @@ def parse_opt():
     parser.add_argument('--t_intro_region', default=4, type=int,
                         help='the delay of aggregation output')
 
-    parser.add_argument('--t_inter_region', default=1, type=int,
+    parser.add_argument('--t_inter_region', default=4, type=int,
                         help='the delay of backward inputs')
-    # 32
+
     parser.add_argument('--dim_attention_global', default=16, type=int,
                         help='the dim of attention of query and key in each unit')
-    # 8
-    parser.add_argument('--dim_attention_unit', default=4, type=int,
+
+    parser.add_argument('--dim_attention_unit', default=2, type=int,
                         help='the dim of attention of query and key in each unit')
 
     parser.add_argument('--num_attention_groups', default=8, type=int,
