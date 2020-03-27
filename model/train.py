@@ -145,7 +145,8 @@ def main():
                       ]
 
         file = opt.data_file + '.train'
-        data_loader = prepare_data_loader(batch_size=opt.batch_size, file=file, rotations=opt.rotations)
+        data_loader = prepare_data_loader(batch_size=opt.batch_size, file=file,
+                                          rotations=opt.rotations, early_cuda=opt.early_cuda)
 
         save(model, state.steps)
         train(model, data_loader, optimizers, opt.epochs, state)

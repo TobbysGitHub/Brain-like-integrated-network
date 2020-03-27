@@ -45,9 +45,11 @@ class RoundSampler(Sampler):
 
 
 class RotatedDataSet(Dataset):
-    def __init__(self, file, rotations=None):
+    def __init__(self, file, rotations=None, early_cuda=True):
+        dev = device if early_cuda else None
+
         def load(dir, file_name):
-            return torch.load(os.path.join(dir, file_name), map_location=device)
+            return torch.load(os.path.join(dir, file_name), map_location=dev)
 
         self.data = load(DATA_DIR, file).float()
         if not rotations:
@@ -98,8 +100,8 @@ def collate_fn(batch):
     return iter_frame(batch.to(device))
 
 
-def prepare_data_loader(batch_size, file, rotations, shuffle=True):
-    dataset = RotatedDataSet(file, rotations)
+def prepare_data_loader(batch_size, file, rotations, shuffle=True, early_cuda=True):
+    dataset = RotatedDataSet(file, rotations, early_cuda)
     data_loader = DataLoader(dataset=dataset,
                              batch_size=batch_size,
                              sampler=RoundSampler(data_source=dataset,

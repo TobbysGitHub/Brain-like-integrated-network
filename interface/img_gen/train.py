@@ -45,6 +45,7 @@ def train(gen_net, model, optim, opt, model_opt, state):
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size,
                                       file=file,
                                       rotations=model_opt.rotations,
+                                      early_cuda=model_opt.early_cuda,
                                       shuffle=True)
 
     for epoch in range(opt.epochs):
@@ -58,6 +59,7 @@ def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
     file = model_opt.data_file + '.eval'
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
                                       rotations=model_opt.rotations,
+                                      early_cuda=model_opt.early_cuda,
                                       shuffle=False)
     num_rotations = len(model_opt.rotations)
     num_max = displays * num_rotations
@@ -89,6 +91,7 @@ def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
 def eval(gen_net, model, opt, model_opt):
     file = model_opt.data_file + '.eval'
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
+                                      early_cuda=model_opt.early_cuda,
                                       rotations=model_opt.rotations,
                                       shuffle=True)
     batch_gen = gen_batch(model, data_loader, opt.batch_size)
