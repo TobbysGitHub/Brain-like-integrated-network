@@ -73,6 +73,7 @@ def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, wei
         opti.zero_grad()
 
     if background_loss > 0.6:
+        # experience shows this can accelerate training
         enc_agg_loss.backward(retain_graph=True)
         optimizers[1].step()
         return background_loss
@@ -133,9 +134,7 @@ def main():
     try:
         if opt.state_dict is not None:
             model.load_state_dict(torch.load(opt.state_dict, map_location=device))
-            state = TrainingState(int(opt.state_dict.split('.')[-1]))
-        else:
-            state = TrainingState(0, opt.early_stop)
+        state = TrainingState(0, opt.early_stop)
 
         tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(MODEL_RUNS_DIR, model.extra_repr()))
 
