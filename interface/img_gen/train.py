@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torchvision.utils as utils
 import torch.nn.functional as F
@@ -17,6 +19,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class TrainState:
     def __init__(self, steps):
         self.steps = steps
+        self.epoch = 0
+        self.batch = 0
 
 
 def train_batch(gen_net, batch, optim, mode, state):
@@ -34,10 +38,7 @@ def train_batch(gen_net, batch, optim, mode, state):
     loss.backward()
     optim.step()
 
-    if mode == 0:
-        tb.add_scalar(loss=loss.item())
-    else:
-        tb.add_scalar(loss1=loss.item())
+    tb.add_scalar(loss=loss.item())
 
 
 def train(gen_net, model, optim, opt, model_opt, state):
@@ -53,6 +54,8 @@ def train(gen_net, model, optim, opt, model_opt, state):
 
         for batch in batch_gen:
             train_batch(gen_net, batch, optim, opt.mode, state)
+            state.batch += 1
+        state.epoch += 1
 
 
 def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
@@ -81,7 +84,7 @@ def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
             .contiguous() \
             .view(-1, 3, 96, 96)
 
-        file = '{}/{}{}_{}'.format(dir, model_opt.data_file, str(opt.mode), model_opt.rotations[i])
+        file = '{}/{}_r{}'.format(dir, model_opt.data_file, model_opt.rotations[i])
         torch.save(imgs, file)
         utils.save_image(imgs, file + '.png', nrow=nrow, normalize=True)
         grid_img = utils.make_grid(imgs, nrow=nrow, normalize=True)
@@ -108,10 +111,7 @@ def eval(gen_net, model, opt, model_opt):
 
     loss = np.mean(loss)
 
-    if opt.mode == 0:
-        tb.writer.add_text('eval_loss', str(loss))
-    else:
-        tb.writer.add_text('eval_loss1', str(loss))
+    tb.writer.add_text('eval_loss', str(loss))
 
 
 def main():
@@ -127,14 +127,16 @@ def main():
         dim_inputs = model.encoder.dim_outputs
     gen_net = ImageGenNet(dim_inputs).to(device)
     state = TrainState(0)
-    tb.creat_writer(steps_fn=lambda: state.steps, log_dir='{}/{}'.format(INTERFACE_RUNS_DIR, opt.model_repr))
+    tb.creat_writer(steps_fn=lambda: state.steps,
+                    log_dir='{}/{}/image_gen_mode{}'.format(INTERFACE_RUNS_DIR, opt.model_repr, opt.mode))
 
     optim = torch.optim.Adam(gen_net.parameters(), lr=1e-3)
 
     train(gen_net, model, optim, opt, model_opt, state)
 
     with torch.no_grad():
-        dir = '{}/{}/'.format(MODEL_DOMAIN_DIR, opt.model_repr)
+        dir = '{}/{}/image_gen_mode{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode)
+        os.mkdir(dir)
         visualize(gen_net, model, opt=opt, model_opt=model_opt, dir=dir)
         # file='{}/{}/image_gen{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode))
         eval(gen_net, model, opt=opt, model_opt=model_opt)
