@@ -67,23 +67,23 @@ class RotatedDataSet(Dataset):
 
         item_data = self.data[i_episode, offset:offset + 256]
 
+        item_data = item_data[:, :96 * 96].contiguous()
         if not rotation == 0:
-            item_data = item_data.clone()
             if rotation == 1:
-                item_data[:, :96 * 96] = item_data[:, :96 * 96] \
+                item_data = item_data \
                     .view(-1, 96, 96) \
                     .transpose(1, 2) \
                     .flip(dims=(-1,)) \
                     .contiguous() \
                     .view(-1, 96 * 96)
             elif rotation == 2:
-                item_data[:, :96 * 96] = item_data[:, :96 * 96] \
+                item_data = item_data \
                     .view(-1, 96, 96) \
                     .flip(dims=(1,)) \
                     .contiguous() \
                     .view(-1, 96 * 96)
             elif rotation == 3:
-                item_data[:, :96 * 96] = item_data[:, :96 * 96] \
+                item_data = item_data \
                     .view(-1, 96, 96) \
                     .transpose(1, 2) \
                     .contiguous() \
@@ -91,7 +91,7 @@ class RotatedDataSet(Dataset):
             else:
                 raise ValueError()
 
-        return item_data  # 256 * (96*96+4)
+        return item_data  # 256 * (96*96)
 
     def __len__(self):
         return len(self.data) * len(self.rotations) * 16

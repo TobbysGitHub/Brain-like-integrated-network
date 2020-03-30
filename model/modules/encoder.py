@@ -44,7 +44,7 @@ class Encoder(nn.Module):
                  dim_unit,
                  dim_hidden):
         super().__init__()
-        self.dim_inputs = 4 * (96 * 96 + 4)
+        self.dim_inputs = 4 * (96 * 96)
         self.num_units_regions = num_units_regions
         self.dim_unit = dim_unit
         self.dim_hidden = dim_hidden
