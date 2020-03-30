@@ -13,65 +13,35 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     :param weights: batch_size * n_neg * n_units
     """
 
-    def distance(x1, x2):
-        cs = cosine_similarity(x1, x2, dim=-1)
-        cs.data = torch.clamp(cs, min=1e-5 - 1, max=1 - 1e-5)
-        return torch.acos(cs)
+    def theta(x1, x2):
+        cos = cosine_similarity(x1, x2, dim=-1)
+        cos.data = torch.clamp(cos, min=1e-5 - 1, max=1 - 1e-5)
+        return torch.acos(cos)
 
-    # def sin_distance(x1, x2):
-    #     cs = cosine_similarity(x1, x2, dim=-1)
-    #     return torch.sqrt(1 - torch.pow(torch.relu(cs), 2))
-    #
-    # def cos_distance(x1, x2):
-    #     cs = cosine_similarity(x1, x2, dim=-1)
-    #     theta = torch.acos(cs)
-    #     return 1 - torch.relu(cs) + torch.relu(theta - np.pi / 2)
+    enc_enc_thetas = theta(enc_outputs.unsqueeze(0),
+                           enc_outputs.unsqueeze(1))  # batch_size * batch_size * n_units
+    enc_agg_thetas = theta(enc_outputs, agg_outputs)  # batch_size * n_units
+    enc_att_thetas = theta(enc_outputs, att_outputs)  # batch_size * n_units
+    agg_negs_thetas = theta(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
 
-    enc_enc_dists = distance(enc_outputs.unsqueeze(0), enc_outputs.unsqueeze(1))  # batch_size * batch_size * n_units
-    # todo
-    # enc_agg_cos_dists = cos_distance(enc_outputs, agg_outputs)  # batch_size * n_units
-    enc_agg_dists = distance(enc_outputs, agg_outputs)  # batch_size * n_units
-    enc_att_dists = distance(enc_outputs, att_outputs)  # batch_size * n_units
-    enc_att_dists = distance(enc_outputs, att_outputs)  # batch_size * n_units
-    # enc_neg_dists = distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-    # todo
-    # agg_neg_sin_dists = sin_distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-    # enc_neg_sin_dists = sin_distance(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-    agg_neg_dists = distance(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
-
-    tb.histogram(enc_enc_dists=enc_enc_dists,
-                 # enc_neg_dists=enc_neg_dists,
-                 # enc_agg_cos_dists=enc_agg_cos_dists,
-                 enc_agg_dists=enc_agg_dists,
-                 enc_att_dists=enc_att_dists,
-                 agg_neg_dists=agg_neg_dists,
+    tb.histogram(enc_enc_thetas=enc_enc_thetas,
+                 enc_agg_thetas=enc_agg_thetas,
+                 enc_att_thetas=enc_att_thetas,
+                 agg_negs_thetas=agg_negs_thetas,
                  weights_max=None if weights is None else weights.max(1)[0])
-    # agg_neg_sin_dists=agg_neg_sin_dists)
 
-    agg_neg_dist = agg_neg_dists.mean(1)
-    # agg_neg_sin_dist = agg_neg_sin_dists.mean(1)
-    # enc_neg_sin_dist = enc_neg_sin_dists.mean(1)
+    agg_neg_thetas = agg_negs_thetas.mean(1)
+    agg_neg_w_thetas = (agg_negs_thetas * weights).sum(1)
 
-    agg_neg_w_dist = (agg_neg_dists * weights).sum(1)  # batch_size * n_units
-
-    # agg_neg_w_sin_dist = (agg_neg_sin_dists * weights).sum(1)  # batch_size * n_units
-
-    # squeeze loss to [-1, 0)
-    def squash(z):
-        return 1 - torch.exp(-z)
-
-    weight_loss = torch.mean(squash(enc_agg_dists / agg_neg_w_dist))
-    # background_loss = 0.5 * (torch.mean(squash(enc_agg_cos_dists / agg_neg_sin_dist)) +
-    #                          torch.mean(squash(enc_agg_cos_dists / enc_neg_sin_dist)))
-    background_loss = (torch.mean(squash(enc_agg_dists / agg_neg_dist)))
-    # background_loss = torch.mean(enc_agg_dists - agg_neg_dist)
-    # background_loss = 0.5 * torch.mean(squash(enc_agg_dists / enc_neg_dist) + squash(enc_agg_dists / agg_neg_dist))
+    pre_train_loss = torch.mean(enc_agg_thetas - enc_enc_thetas)
+    weight_loss = torch.mean(enc_agg_thetas - agg_neg_w_thetas)
+    background_loss = torch.mean(enc_agg_thetas - agg_neg_thetas)
 
     tb.add_scalar(
         background_loss=background_loss,
         weight_loss=weight_loss)
 
-    return weight_loss, background_loss, enc_agg_dists.mean()
+    return weight_loss, background_loss, pre_train_loss
 
 
 def cosine_loss(x1, x2):

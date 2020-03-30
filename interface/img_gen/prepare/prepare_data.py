@@ -4,10 +4,14 @@ from tqdm import tqdm
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def gen_batch(model, data_loader, batch_size):
+def gen_batch(model, data_loader, batch_size, epoch=None):
     for batch_frames in data_loader:
         model.reset()
-        for index, inputs in enumerate(tqdm(batch_frames, total=256, mininterval=2, leave=False)):
+        if epoch is not None:
+            desc = 'epoch:{}'.format(epoch)
+        else:
+            desc = ''
+        for index, inputs in enumerate(tqdm(batch_frames, total=256, mininterval=2, leave=False, desc=desc)):
             assert len(inputs) >= batch_size
 
             with torch.no_grad():

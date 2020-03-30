@@ -23,6 +23,12 @@ class TrainState:
         self.batch = 0
 
 
+def save(gen_net, dir):
+    file = '{}/gen_net_state_dict'.format(dir)
+
+    torch.save(gen_net.state_dict(), f=file)
+
+
 def train_batch(gen_net, batch, optim, mode, state):
     assert mode in [0, 1]
     img, *inputs = batch
@@ -50,7 +56,7 @@ def train(gen_net, model, optim, opt, model_opt, state):
                                       shuffle=True)
 
     for epoch in range(opt.epochs):
-        batch_gen = gen_batch(model, data_loader, opt.batch_size)
+        batch_gen = gen_batch(model, data_loader, opt.batch_size, state.epoch)
 
         for batch in batch_gen:
             train_batch(gen_net, batch, optim, opt.mode, state)
@@ -133,10 +139,11 @@ def main():
     optim = torch.optim.Adam(gen_net.parameters(), lr=1e-3)
 
     train(gen_net, model, optim, opt, model_opt, state)
-
+    dir = '{}/{}/image_gen_mode{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+    save(gen_net, dir)
     with torch.no_grad():
-        dir = '{}/{}/image_gen_mode{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode)
-        os.mkdir(dir)
         visualize(gen_net, model, opt=opt, model_opt=model_opt, dir=dir)
         # file='{}/{}/image_gen{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode))
         eval(gen_net, model, opt=opt, model_opt=model_opt)

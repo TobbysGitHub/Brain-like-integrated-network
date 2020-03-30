@@ -67,14 +67,16 @@ def save(model, steps):
 
 
 def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights):
-    cortex_loss, background_loss, enc_agg_loss = contrastive_loss(enc_outputs, agg_outputs, att_outputs, mem_outputs,
-                                                                  weights)
+    cortex_loss, background_loss, pre_train_loss = contrastive_loss(enc_outputs, agg_outputs, att_outputs,
+                                                                       mem_outputs,
+                                                                       weights)
     for opti in optimizers:
         opti.zero_grad()
-
-    if background_loss > 0.6:
+    #
+    if pre_train_loss > 0.0:
         # experience shows this can accelerate training
-        enc_agg_loss.backward(retain_graph=True)
+        pre_train_loss.backward(retain_graph=True)
+        optimizers[0].step()
         optimizers[1].step()
         return background_loss
 
