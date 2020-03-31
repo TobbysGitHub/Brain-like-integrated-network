@@ -46,7 +46,6 @@ class Model(nn.Module):
         self.timestamp = datetime.now().strftime('%b%d_%H-%M-%S')
         self.num_units = '_'.join([str(n) for n in self.num_units_regions])
         self.data_file = opt.data_file
-        self.rotations = '_'.join([str(r) for r in opt.rotations])
 
     def forward(self, inputs):
         """
@@ -87,5 +86,5 @@ class Model(nn.Module):
         return '{timestamp}_model__unit_n{num_units}_d{dim_unit}_' \
                '@d{dim_attention_global}_@unit_d{dim_attention_unit}_' \
                '@mem{len_attention_memory}_@groups{num_attention_groups}_' \
-               'r{rotations}' \
+               '{data_file}' \
             .format(**self.__dict__)

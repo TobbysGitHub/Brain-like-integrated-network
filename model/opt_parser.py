@@ -15,9 +15,6 @@ def parse_opt():
     parser.add_argument('--early_cuda', type=int, default=0,
                         help='0, 1, 2,to prevent out of cuda mem')
 
-    parser.add_argument('--rotations', nargs='+', type=int, default=[0],
-                        help='0, 1, 2, 3 is to rotate 0, 90, 180, 270')
-
     parser.add_argument('--epochs', default=20, type=int,
                         help='epochs')
 

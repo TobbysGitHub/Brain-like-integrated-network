@@ -23,78 +23,28 @@ def iter_frame(batch):
         frames.pop(0)
 
 
-class RoundSampler(Sampler):
-    def __init__(self, data_source, rounds, shuffle=True):
-        super().__init__(data_source)
-        self.data_source = data_source
-        self.rounds = rounds
-        self.shuffle = shuffle
-
-    def __iter__(self):
-        n = len(self.data_source) // self.rounds
-
-        if self.shuffle:
-            index_list = torch.stack([torch.randperm(n) * self.rounds + i for i in range(self.rounds)],
-                                     dim=-1).view(-1).tolist()
-        else:
-            index_list = torch.stack([torch.arange(n) * self.rounds + i for i in range(self.rounds)],
-                                     dim=-1).view(-1).tolist()
-
-        return iter(index_list)
-
-    def __len__(self):
-        return len(self.data_source)
-
-
-class RotatedDataSet(Dataset):
-    def __init__(self, file, rotations=None):
+class UnfoldDataSet(Dataset):
+    def __init__(self, file, size=256, step=16):
         dev = device if early_cuda_ == 0 else None
 
         def load(dir, file_name):
             return torch.load(os.path.join(dir, file_name), map_location=dev)
 
         self.data = load(DATA_DIR, file).float()
-        if not rotations:
-            self.rotations = [0]
-        else:
-            self.rotations = rotations
+        self.size = size
+        self.step = step
+        self.folds = (self.data.shape[1] - size) // step + 1
 
     def __getitem__(self, item):
-        rotation = self.rotations[item % len(self.rotations)]
-        item = item // len(self.rotations)
-        i_episode = item // 16
-        offset = item % 16 * 16
+        i_episode = item // self.folds
+        offset = item % self.folds * self.step
 
-        item_data = self.data[i_episode, offset:offset + 256]
+        item_data = self.data[i_episode, offset:offset + self.size]
 
-        item_data = item_data[:, :96 * 96].contiguous()
-        if not rotation == 0:
-            if rotation == 1:
-                item_data = item_data \
-                    .view(-1, 96, 96) \
-                    .transpose(1, 2) \
-                    .flip(dims=(-1,)) \
-                    .contiguous() \
-                    .view(-1, 96 * 96)
-            elif rotation == 2:
-                item_data = item_data \
-                    .view(-1, 96, 96) \
-                    .flip(dims=(1,)) \
-                    .contiguous() \
-                    .view(-1, 96 * 96)
-            elif rotation == 3:
-                item_data = item_data \
-                    .view(-1, 96, 96) \
-                    .transpose(1, 2) \
-                    .contiguous() \
-                    .view(-1, 96 * 96)
-            else:
-                raise ValueError()
-
-        return item_data  # 256 * (96*96)
+        return item_data  # 256 * -1
 
     def __len__(self):
-        return len(self.data) * len(self.rotations) * 16
+        return len(self.data) * self.folds
 
 
 def collate_fn(batch):
@@ -104,15 +54,12 @@ def collate_fn(batch):
     return iter_frame(batch)
 
 
-def prepare_data_loader(batch_size, file, rotations, early_cuda, shuffle=True):
+def prepare_data_loader(batch_size, file, early_cuda, shuffle=True):
     global early_cuda_
     early_cuda_ = early_cuda
-    dataset = RotatedDataSet(file, rotations)
-    data_loader = DataLoader(dataset=dataset,
+    data_loader = DataLoader(dataset=UnfoldDataSet(file),
                              batch_size=batch_size,
-                             sampler=RoundSampler(data_source=dataset,
-                                                  rounds=len(dataset.rotations),
-                                                  shuffle=shuffle),
+                             shuffle=shuffle,
                              collate_fn=collate_fn,
                              drop_last=True)
 

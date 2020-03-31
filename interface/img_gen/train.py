@@ -51,7 +51,6 @@ def train(gen_net, model, optim, opt, model_opt, state):
     file = model_opt.data_file + '.train'
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size,
                                       file=file,
-                                      rotations=model_opt.rotations,
                                       early_cuda=model_opt.early_cuda,
                                       shuffle=True)
 
@@ -67,41 +66,32 @@ def train(gen_net, model, optim, opt, model_opt, state):
 def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
     file = model_opt.data_file + '.eval'
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
-                                      rotations=model_opt.rotations,
                                       early_cuda=model_opt.early_cuda,
                                       shuffle=False)
-    num_rotations = len(model_opt.rotations)
-    num_max = displays * num_rotations
-    batch_gen = gen_batch(model, data_loader, batch_size=num_max)
+    batch_gen = gen_batch(model, data_loader, batch_size=displays)
 
     for img, *inputs in batch_gen:
         break
 
     img_gen = gen_net(inputs[opt.mode])
 
-    for i in range(num_rotations):
-        img_i = img[i::num_rotations]
-        img_gen_i = img_gen[i::num_rotations]
+    imgs = torch.stack([img, img_gen], dim=1) \
+        .view(displays // 8, 8, 2, 1, 96, 96) \
+        .transpose(2, 1) \
+        .contiguous() \
+        .view(-1, 1, 96, 96)
 
-        imgs = torch.stack([img_i, img_gen_i], dim=1).view(-1, 1, 96, 96) \
-            .expand(-1, 3, -1, -1) \
-            .view(displays // 8, 8, 2, 3, 96, 96) \
-            .transpose(2, 1) \
-            .contiguous() \
-            .view(-1, 3, 96, 96)
-
-        file = '{}/{}_r{}'.format(dir, model_opt.data_file, model_opt.rotations[i])
-        torch.save(imgs, file)
-        utils.save_image(imgs, file + '.png', nrow=nrow, normalize=True)
-        grid_img = utils.make_grid(imgs, nrow=nrow, normalize=True)
-        tb.writer.add_image(file, grid_img)
+    file = '{}/{}'.format(dir, model_opt.data_file)
+    torch.save(imgs, file)
+    utils.save_image(imgs, file + '.png', nrow=nrow, normalize=True)
+    grid_img = utils.make_grid(imgs, nrow=nrow, normalize=True)
+    tb.writer.add_image(file, grid_img)
 
 
 def eval(gen_net, model, opt, model_opt):
     file = model_opt.data_file + '.eval'
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
                                       early_cuda=model_opt.early_cuda,
-                                      rotations=model_opt.rotations,
                                       shuffle=True)
     batch_gen = gen_batch(model, data_loader, opt.batch_size)
     loss = []
@@ -134,18 +124,17 @@ def main():
     gen_net = ImageGenNet(dim_inputs).to(device)
     state = TrainState(0)
     tb.creat_writer(steps_fn=lambda: state.steps,
-                    log_dir='{}/{}/image_gen_mode{}'.format(INTERFACE_RUNS_DIR, opt.model_repr, opt.mode))
+                    log_dir='{}/{}/{}_mode{}'.format(INTERFACE_RUNS_DIR, opt.model_repr, model_opt.data_file, opt.mode))
 
     optim = torch.optim.Adam(gen_net.parameters(), lr=1e-3)
 
     train(gen_net, model, optim, opt, model_opt, state)
-    dir = '{}/{}/image_gen_mode{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode)
+    dir = '{}/{}/{}_mode{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, model_opt.data_file, opt.mode)
     if not os.path.exists(dir):
         os.makedirs(dir)
     save(gen_net, dir)
     with torch.no_grad():
         visualize(gen_net, model, opt=opt, model_opt=model_opt, dir=dir)
-        # file='{}/{}/image_gen{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, opt.mode))
         eval(gen_net, model, opt=opt, model_opt=model_opt)
 
 
