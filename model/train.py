@@ -5,7 +5,7 @@ import numpy as np
 
 import torch
 import torch.optim as optim
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from dataset.dataset import prepare_data_loader
 from dirs.delete_data import delete_data
@@ -33,18 +33,17 @@ class TrainingState:
 
         self.epoch = 0
         self.batch = 0
+        self.early_stop = False
 
-    def loss(self, loss):
+    def monitor(self, loss):
         self.total += 1
         if loss < self.min_loss:
             self.min_loss = loss
             self.inc = 0
-            return True
         else:
             self.inc += 1
             if self.total > 10 and self.inc >= self.early_stop_steps:
                 self.early_stop = True
-            return False
 
 
 def save(model, steps):
@@ -68,8 +67,8 @@ def save(model, steps):
 
 def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights):
     cortex_loss, background_loss, pre_train_loss = contrastive_loss(enc_outputs, agg_outputs, att_outputs,
-                                                                       mem_outputs,
-                                                                       weights)
+                                                                    mem_outputs,
+                                                                    weights)
     for opti in optimizers:
         opti.zero_grad()
     #
@@ -97,7 +96,7 @@ def train_batch(batch, model, optimizers, state):
     counter = 0
 
     model.reset()
-    desc = '  - (Training epoch:{}/batch:{})'.format(state.epoch, state.batch)
+    desc = '  - Frame'
     for inputs in tqdm(batch, mininterval=2, desc=desc, leave=False, total=256):
         state.steps += 1
         results = model(inputs)
@@ -109,12 +108,14 @@ def train_batch(batch, model, optimizers, state):
         sum_loss += loss.item()
         counter += 1
 
-    state.loss(sum_loss / counter)
+    state.monitor(sum_loss / counter)
 
 
 def train(model, data_loader, optimizers, epochs, state):
-    for epoch in range(epochs):
-        for batch in data_loader:
+    desc = '  - Epoch'
+    for _ in tqdm(range(epochs), mininterval=2, leave=False, desc=desc):
+        desc = '  - Batch'
+        for batch in tqdm(data_loader, mininterval=2, leave=False, desc=desc):
             train_batch(batch, model, optimizers, state)
             if state.early_stop:
                 return
