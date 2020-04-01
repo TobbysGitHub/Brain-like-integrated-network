@@ -8,7 +8,7 @@ import numpy as np
 from dirs.dirs import *
 from interface.img_gen import opt_parser
 from interface.img_gen.image_gen_net import ImageGenNet
-from interface.img_gen.prepare.prepare_data import gen_batch
+from interface.img_gen.prepare_data import gen_batch
 from model.brain_like_model import Model
 from dataset.dataset import prepare_data_loader
 from tensor_board import tb

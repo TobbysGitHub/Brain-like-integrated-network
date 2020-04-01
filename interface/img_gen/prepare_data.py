@@ -25,9 +25,9 @@ def gen_batch(model, data_loader, batch_size, epoch=None):
 
                 attention = model.hippocampus.model[0](agg_outputs.view(inputs_size, -1))
 
-            imgs, outputs, attentions = (torch.split(x, batch_size) for x in
+            imgs, enc_outputs, attentions = (torch.split(x, batch_size) for x in
                                          (inputs[:, -96 * 96:], enc_outputs, attention))
 
-            for img, attention, output in zip(imgs, attentions, outputs):
+            for img, attention, enc_output in zip(imgs, attentions, enc_outputs):
                 if len(img) == batch_size:
-                    yield img, attention, output
+                    yield img, attention, enc_output

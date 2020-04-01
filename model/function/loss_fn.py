@@ -14,6 +14,8 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     """
 
     def theta(x1, x2):
+        # the solid-angle in dim=2, where the dim is dim_attention_unit.
+        # When dim=3, this should return cosine-similarity(not tested yet)
         cos = cosine_similarity(x1, x2, dim=-1)
         cos.data = torch.clamp(cos, min=1e-5 - 1, max=1 - 1e-5)
         return torch.acos(cos)

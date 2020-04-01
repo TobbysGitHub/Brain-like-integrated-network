@@ -23,8 +23,9 @@ class Model(nn.Module):
 
         self.t_intro_region = opt.t_intro_region
         self.t_inter_region = opt.t_inter_region
-        self.memory = []
-        self.mem_attention = None
+        self.enc_memory_list = []
+        self.last_attention = None
+        self.last_enc_outputs = None
 
         self.encoder = Encoder(num_units_regions=opt.num_units_regions,
                                dim_unit=opt.dim_unit,
@@ -50,36 +51,47 @@ class Model(nn.Module):
     def forward(self, inputs):
         """
         :param inputs: s_b * (4*96*96+4)
-        :param memory:
         :return:
         """
-        warm_up = len(self.memory) < max(self.t_intro_region, self.t_inter_region)
-        if warm_up:
-            enc_output_list = self.encoder(inputs)  # [[s_b, n_u, d_u],]
-            self.memory.append(enc_output_list)
+        if self.warm_up(inputs):
             return None
-        else:
-            agg_output_list = self.aggregator(self.memory[-self.t_intro_region],
-                                              self.memory[-self.t_inter_region])  # [[s_b, n_u, d_u],]
+
+        agg_output_list = self.aggregator(self.enc_memory_list[-self.t_intro_region],
+                                          self.enc_memory_list[-self.t_inter_region])  # [[s_b, n_u, d_u],]
+        agg_outputs = torch.cat(agg_output_list, dim=1)
+
+        mem_outputs = self.last_enc_outputs
+        mem_attention = self.last_attention
+        attention, weights, att_outputs = self.hippocampus(agg_outputs, (mem_attention, mem_outputs))
+        enc_output_list = self.encoder(inputs, att_outputs)
+        enc_outputs = torch.cat(enc_output_list, dim=1)
+
+        self.last_attention = attention
+        self.last_enc_outputs = enc_outputs
+        self.enc_memory_list.append(enc_output_list)
+        self.enc_memory_list.pop(0)
+        return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights
+
+    def warm_up(self, inputs):
+        if len(self.enc_memory_list) < max(self.t_intro_region, self.t_inter_region):
+            enc_output_list = self.encoder(inputs)  # [[s_b, n_u, d_u],]
+            self.enc_memory_list.append(enc_output_list)
+            return True
+        elif self.last_attention is None:
+            agg_output_list = self.aggregator(self.enc_memory_list[-self.t_intro_region],
+                                              self.enc_memory_list[-self.t_inter_region])  # [[s_b, n_u, d_u],]
             agg_outputs = torch.cat(agg_output_list, dim=1)
-            mem_outputs = torch.cat(self.memory[-1], dim=1)
-
-            if self.mem_attention is None:
-                self.mem_attention = self.hippocampus(agg_outputs)
-                return None
-
-            attention, weights, att_outputs = self.hippocampus(agg_outputs, (self.mem_attention, mem_outputs))
-            self.mem_attention = attention
-            enc_output_list = self.encoder(inputs, att_outputs)
-            enc_outputs = torch.cat(enc_output_list, dim=1)
-
-            self.memory.append(enc_output_list)
-            self.memory.pop(0)
-            return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights
+            self.last_attention = self.hippocampus(agg_outputs)
+            enc_output_list = self.encoder(inputs)
+            self.last_enc_outputs = torch.cat(enc_output_list, dim=1)
+            self.enc_memory_list.append(enc_output_list)
+            self.enc_memory_list.pop(0)
+            return True
+        return False
 
     def reset(self):
-        self.memory.clear()
-        self.mem_attention = None
+        self.enc_memory_list.clear()
+        self.last_attention = None
         self.aggregator.reset()
 
     def extra_repr(self) -> str:

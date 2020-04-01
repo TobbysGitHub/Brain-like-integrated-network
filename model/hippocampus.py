@@ -56,8 +56,8 @@ class Hippocampus(nn.Module):
             return attention
         else:
             # memories is a tuple
-            mem_attention = memories[0]  # s_b * num_units(mem_capacity)
-            mem_outputs = memories[1]  # s_b * num_units(mem_capacity) * d
+            mem_attention, mem_outputs = memories  # s_b * num_units(mem_capacity) s_b * num_units(mem_capacity) * d
+            mem_outputs = mem_outputs.detach()
 
             weights = (attention.unsqueeze(1) * mem_attention).sum(-1)  # s_b * s_b * num_units
             weights = weights * self.temperature
