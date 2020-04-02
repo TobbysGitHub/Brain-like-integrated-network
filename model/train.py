@@ -5,7 +5,7 @@ import numpy as np
 
 import torch
 import torch.optim as optim
-from tqdm.autonotebook import tqdm
+from tqdm import tqdm
 
 from dataset.dataset import prepare_data_loader
 from dirs.delete_data import delete_data
@@ -112,10 +112,8 @@ def train_batch(batch, model, optimizers, state):
 
 
 def train(model, data_loader, optimizers, epochs, state):
-    desc = '  - Epoch'
-    for _ in tqdm(range(epochs), mininterval=2, leave=False, desc=desc):
-        desc = '  - Batch'
-        for batch in tqdm(data_loader, mininterval=2, leave=False, desc=desc):
+    for _ in range(epochs):
+        for batch in data_loader:
             train_batch(batch, model, optimizers, state)
             if state.early_stop:
                 return

@@ -4,7 +4,6 @@ import torch
 import torchvision.utils as utils
 import torch.nn.functional as F
 import numpy as np
-from tqdm.autonotebook import tqdm
 
 from dirs.dirs import *
 from interface.img_gen import opt_parser
@@ -35,7 +34,7 @@ class TrainState:
             self.best_epoch = self.epoch
             self.best_loss = eval_loss
 
-        elif self.epoch - self.best_epoch > 2:
+        elif self.epoch - self.best_epoch > 5:
             self.early_stop = True
             tb.writer.add_text('loss', str(self.best_loss))
 
@@ -90,8 +89,7 @@ def eval_batch(gen_net, batch, mode, loss_list):
 
 
 def train(gen_net, model, optim, train_data_loader, eval_data_loader, opt, state):
-    desc = '  - Epoch'
-    for _ in tqdm(range(opt.epochs), desc=desc, mininterval=2, leave=False):
+    for _ in range(opt.epochs):
         train_data = gen_batch(model, train_data_loader, opt.batch_size)
         train_epoch(gen_net, train_data, optim, opt.mode, state)
         state.epoch += 1
