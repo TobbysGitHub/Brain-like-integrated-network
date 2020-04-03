@@ -52,7 +52,7 @@ def train_epoch(gen_net, data, optim, mode, state):
 
 
 def train_batch(gen_net, batch, optim, mode, state):
-    assert mode in [0, 1]
+    assert mode in [2]
     img, *inputs = batch
     state.steps += 1
     outputs = gen_net(inputs[mode])
@@ -126,7 +126,7 @@ def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
     torch.save(imgs, file)
     utils.save_image(imgs, file + '.png', nrow=nrow, normalize=True)
     grid_img = utils.make_grid(imgs, nrow=nrow, normalize=True)
-    tb.writer.add_image(file, grid_img)
+    tb.writer.add_image('visualize', grid_img)
 
 
 def creat_model(model_opt):

@@ -18,13 +18,15 @@ def gen_batch(model, data_loader, batch_size):
                 if index < 24 or not index % 31 == 0:
                     continue
                 inputs_size = inputs.shape[0]
-                (enc_outputs, agg_outputs, *_), *_ = results
+                (enc_outputs, agg_outputs, att_outputs, *_), *_ = results
 
                 attention = model.hippocampus.model[0](agg_outputs.view(inputs_size, -1))
 
-            imgs, enc_outputs, attentions = (torch.split(x, batch_size) for x in
-                                             (inputs[:, -96 * 96:], enc_outputs, attention))
+            imgs, attentions, enc_outputs, agg_outputs, att_outputs = (torch.split(x, batch_size) for x in
+                                                                       (inputs[:, -96 * 96:], attention, enc_outputs,
+                                                                        agg_outputs, att_outputs))
 
-            for img, attention, enc_output in zip(imgs, attentions, enc_outputs):
+            for img, attention, enc_output, agg_output, att_output in \
+                    zip(imgs, attentions, enc_outputs, agg_outputs, att_outputs):
                 if len(img) == batch_size:
-                    yield img, attention, enc_output
+                    yield img, attention, enc_output, agg_output, att_output

@@ -48,6 +48,8 @@ class Model(nn.Module):
         self.num_units = '_'.join([str(n) for n in self.num_units_regions])
         self.data_file = opt.data_file
 
+        self.counter = 0
+
     def forward(self, inputs):
         """
         :param inputs: s_b * (4*96*96+4)
@@ -63,12 +65,21 @@ class Model(nn.Module):
         mem_outputs = self.last_enc_outputs
         mem_attention = self.last_attention
         attention, weights, att_outputs = self.hippocampus(agg_outputs, (mem_attention, mem_outputs))
-        enc_output_list = self.encoder(inputs, att_outputs)
-        enc_outputs = torch.cat(enc_output_list, dim=1)
+        if inputs is not None:
+            enc_output_list = self.encoder(inputs, att_outputs)
+            enc_outputs = torch.cat(enc_output_list, dim=1)
 
-        self.last_attention = attention
-        self.last_enc_outputs = enc_outputs
-        self.enc_memory_list.append(enc_output_list)
+            self.last_attention = attention
+            self.last_enc_outputs = enc_outputs
+        else:
+            enc_output_list = agg_output_list
+            enc_outputs = agg_outputs
+
+        if self.counter % 2 == 0:
+            self.enc_memory_list.append(enc_output_list)
+        else:
+            self.enc_memory_list.append(agg_output_list)
+        self.counter += 1
         self.enc_memory_list.pop(0)
         return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights
 

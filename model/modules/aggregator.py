@@ -71,7 +71,7 @@ class Aggregator(nn.Module):
 
     def forward(self, x0, x1):
         results = []
-        x1 = x1[1:] + [None]
+        x1 = list(x1[1:]) + [None]
         for x_0, x_1, agg in zip(x0, x1, self.region_list):
             x = torch.cat([x_0, x_1], dim=1) if x_1 is not None else x_0
             x = x.detach()

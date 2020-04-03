@@ -2,6 +2,7 @@ import sys
 
 import model.train
 import interface.img_gen.train
+import interface.casual_test.test
 
 
 def train(num_units_regions=None,
@@ -36,6 +37,10 @@ def train(num_units_regions=None,
     sys.argv = argv
     interface.img_gen.train.main()
 
+    argv = ['test', '--model_repr', model_name, '--mode', '2']
+    sys.argv = argv
+    interface.casual_test.test.main()
+
 
 if __name__ == '__main__':
-    train(batch_size=256, epochs=0, img_gen_opt_dict=dict(epochs=0))
+    train(batch_size=256, epochs=0, data_file='cubic', img_gen_opt_dict=dict(epochs=0, mode=2))
