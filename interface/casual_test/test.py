@@ -67,18 +67,22 @@ def predict(gen_net, model, model_opt, state):
                 model(inputs)
             elif n < 80:
                 (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights = model(None)
-                img_gen = gen_net(agg_outputs[:1])
-                imgs_gen.append(img_gen[0])
-                imgs.append(inputs[0, -96 * 96:])
+                img_gen = gen_net(agg_outputs[:16])
+                imgs_gen.append(img_gen)
+                imgs.append(inputs[:16, -96 * 96:])
             else:
                 break
         break
 
-    imgs_gen = torch.stack(imgs_gen, dim=0).view(-1, 1, 96, 96)
-    imgs = torch.stack(imgs, dim=0).view(-1, 1, 96, 96)
+    imgs_gen = torch.stack(imgs_gen, dim=1).view(16, 16, 1, 96, 96)  # 16_batch * 16_frame * 1,96,96
+    imgs = torch.stack(imgs, dim=1).view(16, 16, 1, 96, 96)
+
+    img_cat = torch.stack([imgs, imgs_gen], dim=1)  # 16_batch * 2 * 16_frame * 1,96,96
+    img_cat = img_cat.view(-1, 1, 96, 96)
+
     file = '{}/{}'.format(state.save_dir, 'prediction.png')
-    utils.save_image(torch.cat([imgs, imgs_gen], dim=0), file, nrow=16, normalize=True)
-    grid_img = utils.make_grid(torch.cat([imgs, imgs_gen], dim=0), nrow=16, normalize=True)
+    utils.save_image(img_cat, file, nrow=16, normalize=True)
+    grid_img = utils.make_grid(img_cat, nrow=16, normalize=True)
     tb.writer.add_image('prediction', grid_img)
 
 
