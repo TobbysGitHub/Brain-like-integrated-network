@@ -42,6 +42,10 @@ def parse_opt():
     parser.add_argument('--t_inter_region', default=4, type=int,
                         help='the delay of backward inputs')
 
+    parser.add_argument('--cache_mix', default=1, type=int,
+                        help='where the aggregator gets its inputs, 1: the outputs of encoder; '
+                             '2: the outputs of aggregator; 3: the outputs of hippocampus')
+
     parser.add_argument('--dim_attention_global', default=16, type=int,
                         help='the dim of attention of query and key in each unit')
 
@@ -53,9 +57,6 @@ def parse_opt():
 
     parser.add_argument('--attention_mask_p', default=0., type=float,
                         help='random mask some memory to avoid over-fitting')
-
-    parser.add_argument('--outputs_mix', default=0.0, type=float,
-                        help='the mix ratio between att_outputs and enc_outputs')
 
     # parser.add_argument('--reward_gamma', default=0.88,
     #                     help='decay rate when the reward`s influence back propagate on memory through time')

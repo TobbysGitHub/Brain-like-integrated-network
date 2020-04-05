@@ -64,10 +64,7 @@ class Encoder(nn.Module):
         self.dim_outputs_regions = [enc.dim_outputs for enc in self.region_list]
         self.dim_outputs = sum(self.dim_outputs_regions)
 
-    def forward(self, inputs, att_outputs=None):
-        # if att_outputs is not None:
-        #     att_outputs = att_outputs.detach()
-        #     att_output_list = torch.split(att_outputs, self.num_units_regions, dim=1)
+    def forward(self, inputs):
 
         inputs = inputs.detach()
         x = self.linear(inputs)

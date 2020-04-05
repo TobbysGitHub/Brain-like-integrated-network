@@ -52,7 +52,7 @@ def train_epoch(gen_net, data, optim, mode, state):
 
 
 def train_batch(gen_net, batch, optim, mode, state):
-    assert mode in [2]
+    assert mode in [0, 1, 2, 3]
     img, *inputs = batch
     state.steps += 1
     outputs = gen_net(inputs[mode])
@@ -122,7 +122,7 @@ def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
         .contiguous() \
         .view(-1, 1, 96, 96)
 
-    file = '{}/{}'.format(dir, model_opt.data_file)
+    file = '{}/{}'.format(dir, 'visualize')
     torch.save(imgs, file)
     utils.save_image(imgs, file + '.png', nrow=nrow, normalize=True)
     grid_img = utils.make_grid(imgs, nrow=nrow, normalize=True)
@@ -143,23 +143,23 @@ def creat_net(model, mode):
     return ImageGenNet(dim_inputs).to(device)
 
 
-def prepare_tensorboard(state, opt, model_opt):
+def prepare_tensorboard(state, opt):
     tb.creat_writer(steps_fn=lambda: state.steps,
-                    log_dir='{}/{}/{}_mode{}'.format(INTERFACE_RUNS_DIR, opt.model_repr, model_opt.data_file, opt.mode))
+                    log_dir='{}/{}/mode{}'.format(INTERFACE_RUNS_DIR, opt.model_domain, opt.mode))
 
 
 def main():
     opt = opt_parser.parse_opt()
-    model_opt = torch.load('{}/{}/opt'.format(MODEL_DOMAIN_DIR, opt.model_repr))
+    model_opt = torch.load('{}/{}/opt'.format(MODEL_DOMAIN_DIR, opt.model_domain))
     model = creat_model(model_opt)
     gen_net = creat_net(model, opt.mode)
     optim = torch.optim.Adam(gen_net.parameters(), lr=1e-3)
 
-    save_dir = '{}/{}/{}_mode{}'.format(MODEL_DOMAIN_DIR, opt.model_repr, model_opt.data_file, opt.mode)
+    save_dir = '{}/{}/mode{}'.format(MODEL_DOMAIN_DIR, opt.model_domain, opt.mode)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     state = TrainState(0, gen_net, save_dir)
-    prepare_tensorboard(state, opt, model_opt)
+    prepare_tensorboard(state, opt)
 
     train_data_loader = prepare_data_loader(batch_size=model_opt.batch_size,
                                             file=model_opt.data_file + '.train',
@@ -177,6 +177,8 @@ def main():
     with torch.no_grad():
         gen_net.load_state_dict(torch.load(state.state_dict, map_location=device))
         visualize(gen_net, model, opt=opt, model_opt=model_opt, dir=save_dir)
+
+    return opt.mode
 
 
 if __name__ == '__main__':

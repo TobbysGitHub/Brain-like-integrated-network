@@ -7,6 +7,11 @@ from model.hippocampus import Hippocampus
 from model.modules.aggregator import Aggregator
 from model.modules.encoder import Encoder
 
+# cache mix mode
+NONE = 1
+WITH_AGGREGATOR = 2
+WITH_ATTENTION = 3
+
 
 class Model(nn.Module):
     def __init__(self, opt):
@@ -23,7 +28,7 @@ class Model(nn.Module):
 
         self.t_intro_region = opt.t_intro_region
         self.t_inter_region = opt.t_inter_region
-        self.enc_memory_list = []
+        self.caches = []
         self.last_attention = None
         self.last_enc_outputs = None
 
@@ -48,7 +53,9 @@ class Model(nn.Module):
         self.num_units = '_'.join([str(n) for n in self.num_units_regions])
         self.data_file = opt.data_file
 
+        self.blinded = False
         self.counter = 0
+        self.cache_mix = opt.cache_mix
 
     def forward(self, inputs):
         """
@@ -58,50 +65,60 @@ class Model(nn.Module):
         if self.warm_up(inputs):
             return None
 
-        agg_output_list = self.aggregator(self.enc_memory_list[-self.t_intro_region],
-                                          self.enc_memory_list[-self.t_inter_region])  # [[s_b, n_u, d_u],]
+        agg_output_list = self.aggregator(self.caches[-self.t_intro_region], self.caches[-self.t_inter_region])
         agg_outputs = torch.cat(agg_output_list, dim=1)
 
-        mem_outputs = self.last_enc_outputs
-        mem_attention = self.last_attention
+        mem_outputs, mem_attention = self.last_enc_outputs, self.last_attention
         attention, weights, att_outputs = self.hippocampus(agg_outputs, (mem_attention, mem_outputs))
-        if inputs is not None:
-            enc_output_list = self.encoder(inputs, att_outputs)
+        att_output_list = list(torch.split(att_outputs, self.num_units_regions, dim=1))
+
+        if not self.blinded:
+            enc_output_list = self.encoder(inputs)
             enc_outputs = torch.cat(enc_output_list, dim=1)
 
             self.last_attention = attention
             self.last_enc_outputs = enc_outputs
-        else:
+        elif self.opt.cache_mix == WITH_AGGREGATOR:
             enc_output_list = agg_output_list
             enc_outputs = agg_outputs
-
-        if self.counter % 2 == 0:
-            self.enc_memory_list.append(enc_output_list)
+        elif self.opt.cache_mix == WITH_ATTENTION:
+            enc_output_list = att_output_list
+            enc_outputs = att_outputs
         else:
-            self.enc_memory_list.append(agg_output_list)
+            raise ValueError('If is blinded, the model must has been trained on mix-mode 2 or 3')
+
         self.counter += 1
-        self.enc_memory_list.pop(0)
+        if self.cache_mix == NONE or self.counter % 2 == 0:
+            self.caches.append(enc_output_list)
+        elif self.cache_mix == WITH_AGGREGATOR:
+            self.caches.append(agg_output_list)
+        elif self.cache_mix == WITH_ATTENTION:
+            self.caches.append(att_output_list)
+        else:
+            raise ValueError('Invalid cache_mix!!')
+        self.caches.pop(0)
+
         return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights
 
     def warm_up(self, inputs):
-        if len(self.enc_memory_list) < max(self.t_intro_region, self.t_inter_region):
+        if len(self.caches) < max(self.t_intro_region, self.t_inter_region):
             enc_output_list = self.encoder(inputs)  # [[s_b, n_u, d_u],]
-            self.enc_memory_list.append(enc_output_list)
+            self.caches.append(enc_output_list)
             return True
         elif self.last_attention is None:
-            agg_output_list = self.aggregator(self.enc_memory_list[-self.t_intro_region],
-                                              self.enc_memory_list[-self.t_inter_region])  # [[s_b, n_u, d_u],]
+            agg_output_list = self.aggregator(self.caches[-self.t_intro_region],
+                                              self.caches[-self.t_inter_region])  # [[s_b, n_u, d_u],]
             agg_outputs = torch.cat(agg_output_list, dim=1)
-            self.last_attention = self.hippocampus(agg_outputs)
+            self.last_attention = self.hippocampus.attention(agg_outputs)
             enc_output_list = self.encoder(inputs)
             self.last_enc_outputs = torch.cat(enc_output_list, dim=1)
-            self.enc_memory_list.append(enc_output_list)
-            self.enc_memory_list.pop(0)
+            self.caches.append(enc_output_list)
+            self.caches.pop(0)
             return True
         return False
 
     def reset(self):
-        self.enc_memory_list.clear()
+        self.caches.clear()
         self.last_attention = None
         self.aggregator.reset()
 
@@ -109,5 +126,5 @@ class Model(nn.Module):
         return '{timestamp}_model__unit_n{num_units}_d{dim_unit}_' \
                '@d{dim_attention_global}_@unit_d{dim_attention_unit}_' \
                '@mem{len_attention_memory}_@groups{num_attention_groups}_' \
-               '{data_file}' \
+               'mix{cache_mix}_{data_file}' \
             .format(**self.__dict__)

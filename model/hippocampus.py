@@ -44,34 +44,36 @@ class Hippocampus(nn.Module):
             torch.nn.init.xavier_normal_(m.weight)
             torch.nn.init.zeros_(m.bias)
 
-    def forward(self, x, memories=None, eye_mask=True):
-        x = x.detach()
+    def attention(self, x):
         batch_size = x.shape[0]
+        x = x.detach()
         x = x.view(batch_size, self.dim_inputs)
         # project to units
         attention = self.model(x)
         attention = attention.view(-1, self.num_units, self.dim_attention_unit)
+        return attention
 
-        if memories is None:
-            return attention
-        else:
-            # memories is a tuple
-            mem_attention, mem_outputs = memories  # s_b * num_units(mem_capacity) s_b * num_units(mem_capacity) * d
-            mem_outputs = mem_outputs.detach()
+    def forward(self, x, memories, eye_mask=True):
+        batch_size = x.shape[0]
+        attention = self.attention(x)
 
-            weights = (attention.unsqueeze(1) * mem_attention).sum(-1)  # s_b * s_b * num_units
-            weights = weights * self.temperature
+        # memories is a tuple
+        mem_attention, mem_outputs = memories  # s_b * num_units(mem_capacity) s_b * num_units(mem_capacity) * d
+        mem_outputs = mem_outputs.detach()
 
-            weights = self.random_mask(weights)
-            if eye_mask:
-                weights = self.eye_mask(weights)
+        weights = (attention.unsqueeze(1) * mem_attention).sum(-1)  # s_b * s_b * num_units
+        weights = weights * self.temperature
 
-            weights = weights.view(batch_size, batch_size // self.num_groups, self.num_groups, self.num_units)
-            weights = torch.softmax(weights, dim=1)
-            weights = weights.view(batch_size, batch_size, self.num_units) / 8
+        weights = self.random_mask(weights)
+        if eye_mask:
+            weights = self.eye_mask(weights)
 
-            outputs = torch.sum(mem_outputs * weights.unsqueeze(-1), dim=1)  # s_b * num_units * d
-            return attention, weights, outputs
+        weights = weights.view(batch_size, batch_size // self.num_groups, self.num_groups, self.num_units)
+        weights = torch.softmax(weights, dim=1)
+        weights = weights.view(batch_size, batch_size, self.num_units) / 8
+
+        outputs = torch.sum(mem_outputs * weights.unsqueeze(-1), dim=1)  # s_b * num_units * d
+        return attention, weights, outputs
 
     def extra_repr(self) -> str:
         return 'num_units:{num_units}, ' \
