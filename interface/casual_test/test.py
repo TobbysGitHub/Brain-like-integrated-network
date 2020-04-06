@@ -21,7 +21,7 @@ class State:
 
 def creat_model(model_opt):
     model = Model(model_opt).to(device)
-    model.cache_mix = NONE
+    model.mix_mode = NONE
     model.load_state_dict(torch.load(model_opt.state_dict, map_location=device))
     return model
 

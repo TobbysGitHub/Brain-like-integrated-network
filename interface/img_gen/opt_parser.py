@@ -12,7 +12,8 @@ def parse_opt():
                         help='batch size')
 
     parser.add_argument('--mode', type=int, default=0,
-                        help='O to train on attention, 1 to train on outputs of units')
+                        help='O to train on attention, 1 to train on enc_outputs of units, '
+                             '2 to train on agg_outputs, 3 to train on att_outputs')
 
     parser.add_argument('--epochs', type=int, default=8,
                         help='epochs')

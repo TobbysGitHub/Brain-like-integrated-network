@@ -42,8 +42,8 @@ def parse_opt():
     parser.add_argument('--t_inter_region', default=4, type=int,
                         help='the delay of backward inputs')
 
-    parser.add_argument('--cache_mix', default=1, type=int,
-                        help='where the aggregator gets its inputs, 1: the outputs of encoder; '
+    parser.add_argument('--mix_mode', default=1, type=int,
+                        help='where the aggregator gets its inputs, 0 is invalid; 1: the outputs of encoder; '
                              '2: the outputs of aggregator; 3: the outputs of hippocampus')
 
     parser.add_argument('--dim_attention_global', default=16, type=int,

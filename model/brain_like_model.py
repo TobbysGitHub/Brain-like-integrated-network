@@ -55,7 +55,7 @@ class Model(nn.Module):
 
         self.blinded = False
         self.counter = 0
-        self.cache_mix = opt.cache_mix
+        self.mix_mode = opt.mix_mode
 
     def forward(self, inputs):
         """
@@ -78,24 +78,24 @@ class Model(nn.Module):
 
             self.last_attention = attention
             self.last_enc_outputs = enc_outputs
-        elif self.opt.cache_mix == WITH_AGGREGATOR:
+        elif self.opt.mix_mode == WITH_AGGREGATOR:
             enc_output_list = agg_output_list
             enc_outputs = agg_outputs
-        elif self.opt.cache_mix == WITH_ATTENTION:
+        elif self.opt.mix_mode == WITH_ATTENTION:
             enc_output_list = att_output_list
             enc_outputs = att_outputs
         else:
             raise ValueError('If is blinded, the model must has been trained on mix-mode 2 or 3')
 
         self.counter += 1
-        if self.cache_mix == NONE or self.counter % 2 == 0:
+        if self.mix_mode == NONE or self.counter % 2 == 0:
             self.caches.append(enc_output_list)
-        elif self.cache_mix == WITH_AGGREGATOR:
+        elif self.mix_mode == WITH_AGGREGATOR:
             self.caches.append(agg_output_list)
-        elif self.cache_mix == WITH_ATTENTION:
+        elif self.mix_mode == WITH_ATTENTION:
             self.caches.append(att_output_list)
         else:
-            raise ValueError('Invalid cache_mix!!')
+            raise ValueError('Invalid mix_mode!!')
         self.caches.pop(0)
 
         return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights
@@ -126,5 +126,5 @@ class Model(nn.Module):
         return '{timestamp}_model__unit_n{num_units}_d{dim_unit}_' \
                '@d{dim_attention_global}_@unit_d{dim_attention_unit}_' \
                '@mem{len_attention_memory}_@groups{num_attention_groups}_' \
-               'mix{cache_mix}_{data_file}' \
+               'mix{mix_mode}_{data_file}' \
             .format(**self.__dict__)
