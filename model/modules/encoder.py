@@ -15,7 +15,7 @@ class EncoderRegion(nn.Module):
         self.dim_hidden = dim_hidden
         self.dim_outputs = num_units * dim_unit
         self.model = nn.Sequential(
-            nn.LayerNorm(dim_inputs),
+            # nn.LayerNorm(dim_inputs),
             UnitWiseLinear(num_units, dim_inputs, dim_hidden),
             nn.LeakyReLU(),
             UnitWiseLinear(num_units, dim_hidden, dim_unit),
