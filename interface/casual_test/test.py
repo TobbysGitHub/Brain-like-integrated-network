@@ -39,7 +39,7 @@ def prepare_tensorboard(opt):
                     log_dir='{}/{}/mode{}'.format(INTERFACE_RUNS_DIR, opt.model_domain, opt.mode))
 
 
-def predict(gen_net, model, model_opt, state):
+def predict(gen_net, opt, model, model_opt, state):
     file = model_opt.data_file + '.eval'
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
                                       early_cuda=model_opt.early_cuda,
@@ -53,8 +53,8 @@ def predict(gen_net, model, model_opt, state):
                 model.blinded = True
             result = model(inputs)
             if n > 24:
-                (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights = result
-                img_gen = gen_net(agg_outputs)
+                outputs, attention, weights = result
+                img_gen = gen_net(outputs[opt.mode - 1])
                 img = inputs[:, -96 * 96:].view_as(img_gen)
                 loss = F.mse_loss(img_gen, img).item()
                 loss_frames.append(loss)
@@ -76,8 +76,8 @@ def predict(gen_net, model, model_opt, state):
                 model.blinded = True
             result = model(inputs)
             if n > 24:
-                (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights = result
-                img_gen = gen_net(agg_outputs[:8])
+                outputs, attention, weights = result
+                img_gen = gen_net(outputs[opt.mode - 1][:8])
                 imgs_gen.append(img_gen)
                 imgs.append(inputs[:8, -96 * 96:])
             if n == 40:
@@ -109,7 +109,7 @@ def main():
     prepare_tensorboard(opt)
 
     with torch.no_grad():
-        predict(gen_net, model, model_opt=model_opt, state=state)
+        predict(gen_net, opt, model, model_opt=model_opt, state=state)
 
 
 if __name__ == '__main__':
