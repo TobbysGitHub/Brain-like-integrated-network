@@ -103,7 +103,7 @@ def train_batch(batch, model, optimizers, state):
         if results is None:
             continue
 
-        (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights = results
+        (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights, global_attention = results
         loss = optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights)
         sum_loss += loss.item()
         counter += 1

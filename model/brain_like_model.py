@@ -29,7 +29,7 @@ class Model(nn.Module):
         self.t_intro_region = opt.t_intro_region
         self.t_inter_region = opt.t_inter_region
         self.caches = []
-        self.last_attention = None
+        self.last_attentions = None
         self.last_enc_outputs = None
 
         self.encoder = Encoder(num_units_regions=opt.num_units_regions,
@@ -68,15 +68,15 @@ class Model(nn.Module):
         agg_output_list = self.aggregator(self.caches[-self.t_intro_region], self.caches[-self.t_inter_region])
         agg_outputs = torch.cat(agg_output_list, dim=1)
 
-        mem_outputs, mem_attention = self.last_enc_outputs, self.last_attention
-        attention, weights, att_outputs = self.hippocampus(agg_outputs, (mem_attention, mem_outputs))
+        mem_outputs, mem_attentions = self.last_enc_outputs, self.last_attentions
+        attentions, global_attention, weights, att_outputs = self.hippocampus(agg_outputs, (mem_attentions, mem_outputs))
         att_output_list = list(torch.split(att_outputs, self.num_units_regions, dim=1))
 
         if not self.blinded:
             enc_output_list = self.encoder(inputs)
             enc_outputs = torch.cat(enc_output_list, dim=1)
 
-            self.last_attention = attention
+            self.last_attentions = attentions
             self.last_enc_outputs = enc_outputs
         elif self.opt.mix_mode == WITH_AGGREGATOR:
             enc_output_list = agg_output_list
@@ -98,18 +98,18 @@ class Model(nn.Module):
             raise ValueError('Invalid mix_mode!!')
         self.caches.pop(0)
 
-        return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights
+        return (enc_outputs, agg_outputs, att_outputs, mem_outputs), attentions, weights, global_attention
 
     def warm_up(self, inputs):
         if len(self.caches) < max(self.t_intro_region, self.t_inter_region):
             enc_output_list = self.encoder(inputs)  # [[s_b, n_u, d_u],]
             self.caches.append(enc_output_list)
             return True
-        elif self.last_attention is None:
+        elif self.last_attentions is None:
             agg_output_list = self.aggregator(self.caches[-self.t_intro_region],
                                               self.caches[-self.t_inter_region])  # [[s_b, n_u, d_u],]
             agg_outputs = torch.cat(agg_output_list, dim=1)
-            self.last_attention = self.hippocampus.attention(agg_outputs)
+            self.last_attentions, _ = self.hippocampus.attentions(agg_outputs)
             enc_output_list = self.encoder(inputs)
             self.last_enc_outputs = torch.cat(enc_output_list, dim=1)
             self.caches.append(enc_output_list)
@@ -119,7 +119,7 @@ class Model(nn.Module):
 
     def reset(self):
         self.caches.clear()
-        self.last_attention = None
+        self.last_attentions = None
         self.aggregator.reset()
 
     def extra_repr(self) -> str:
