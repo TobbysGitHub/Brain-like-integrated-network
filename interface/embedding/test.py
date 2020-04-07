@@ -47,7 +47,7 @@ def predict(model, model_opt):
             result = model(inputs)
             if n > 20 and n % 31 == 0 :
                 labels = labels.view(model_opt.batch_size, 4)[:, -1]
-                (enc_outputs, *_), attention, weights = result
+                (enc_outputs, *_), _, weights, attention = result
                 enc_outputs_list.append(enc_outputs.view(model_opt.batch_size, -1))
                 attention_list.append(attention.view(model_opt.batch_size, -1))
                 labels_list.append(labels)
