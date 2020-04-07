@@ -36,7 +36,7 @@ def creat_net(model, model_domain, mode):
 
 def prepare_tensorboard(opt):
     tb.creat_writer(steps_fn=None,
-                    log_dir='{}/{}/mode{}'.format(EMBEDDING_RUNS_DIR, opt.model_domain, opt.mode))
+                    log_dir='{}/{}/mode{}'.format(INTERFACE_RUNS_DIR, opt.model_domain, opt.mode))
 
 
 def predict(gen_net, opt, model, model_opt, state):

@@ -4,7 +4,7 @@ from dirs.dirs import *
 
 
 def delete_data(model):
-    for d in [MODEL_DOMAIN_DIR, MODEL_RUNS_DIR, INTERFACE_RUNS_DIR]:
+    for d in [MODEL_DOMAIN_DIR, MODEL_RUNS_DIR, INTERFACE_RUNS_DIR, EMBEDDING_RUNS_DIR]:
         path = os.path.join(d, model)
         try:
             shutil.rmtree(path)
