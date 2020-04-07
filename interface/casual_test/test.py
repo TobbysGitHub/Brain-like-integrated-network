@@ -53,7 +53,7 @@ def predict(gen_net, opt, model, model_opt, state):
                 model.blinded = True
             result = model(inputs)
             if n > 24:
-                outputs, attention, weights = result
+                outputs, *_ = result
                 img_gen = gen_net(outputs[opt.mode - 1])
                 img = inputs[:, -96 * 96:].view_as(img_gen)
                 loss = F.mse_loss(img_gen, img).item()
@@ -76,7 +76,7 @@ def predict(gen_net, opt, model, model_opt, state):
                 model.blinded = True
             result = model(inputs)
             if n > 24:
-                outputs, attention, weights = result
+                outputs, *_ = result
                 img_gen = gen_net(outputs[opt.mode - 1][:8])
                 imgs_gen.append(img_gen)
                 imgs.append(inputs[:8, -96 * 96:])
