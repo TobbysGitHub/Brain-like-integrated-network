@@ -44,7 +44,7 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
         weight_loss=weight_loss)
 
     def f(x1, x2):
-        return torch.exp(torch.mul(x1, x2).sum(-1))
+        return torch.exp(cosine_similarity(x1, x2, dim=-1))
 
     enc_agg_f = f(enc_outputs, agg_outputs)  # batch_size * n_units
     agg_negs_f = f(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units

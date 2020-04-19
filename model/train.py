@@ -20,6 +20,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+CONTROL_GROUP = False
 
 
 class TrainingState:
@@ -79,8 +80,10 @@ def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, wei
         optimizers[1].step()
         return background_loss
 
-    cortex_loss.backward(retain_graph=True)
-    # background_loss.backward(retain_graph=True)
+    if not CONTROL_GROUP:
+        cortex_loss.backward(retain_graph=True)
+    else:
+        background_loss.backward(retain_graph=True)
     optimizers[0].step()
     optimizers[1].step()
     # hippocampus_loss = - cortex_loss

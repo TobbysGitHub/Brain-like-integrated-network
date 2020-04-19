@@ -52,6 +52,6 @@ def train(model_opt=None, img_gen_opt=None, casual_test_opt=None):
 
 
 if __name__ == '__main__':
-    train(model_opt=dict(batch_size=256, epochs=0, data_file='cubic', mix_mode=2),
+    train(model_opt=dict(batch_size=256, num_units_regions=[16], epochs=20, data_file='car-racing.64', mix_mode=1),
           img_gen_opt=dict(epochs=0, mode=2),
           casual_test_opt=dict())
