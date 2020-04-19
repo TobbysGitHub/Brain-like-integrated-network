@@ -43,15 +43,24 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
         background_loss=background_loss,
         weight_loss=weight_loss)
 
+    def f(x1, x2):
+        return torch.exp(torch.mul(x1, x2).sum(-1))
+
+    enc_agg_f = f(enc_outputs, agg_outputs)  # batch_size * n_units
+    agg_negs_f = f(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+
+    agg_neg_f = agg_negs_f.mean(1)
+    agg_neg_w_f = (agg_negs_f * weights).sum(1)
+
+    weight_loss = -torch.mean(torch.log(enc_agg_f / agg_neg_w_f))
+    background_loss = -torch.mean(torch.log(enc_agg_f / agg_neg_f))
+    tb.add_scalar(
+        size_agg=torch.mean(torch.abs(agg_outputs)),
+        size_enc=torch.mean(torch.abs(enc_outputs)),
+        background_loss_f=background_loss,
+        weight_loss_f=weight_loss)
+
     return weight_loss, background_loss, pre_train_loss
-
-
-def cosine_loss(x1, x2):
-    x1_norm, x2_norm = torch.norm(x1, dim=-1), torch.norm(x2, dim=-1)
-    dot = torch.mul(x1, x2).sum(-1)
-
-    cosine = dot / (x1_norm * x2_norm)
-    return - cosine.mean()
 
 
 def main():
