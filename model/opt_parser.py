@@ -55,6 +55,9 @@ def parse_opt():
     parser.add_argument('--num_attention_groups', default=8, type=int,
                         help='the num of groups when apply soft_max attention')
 
+    parser.add_argument('--num_attention_splits', default=1, type=int,
+                        help='')
+
     parser.add_argument('--attention_mask_p', default=0., type=float,
                         help='random mask some memory to avoid over-fitting')
 

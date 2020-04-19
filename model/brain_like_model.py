@@ -23,6 +23,7 @@ class Model(nn.Module):
         self.dim_attention_unit = opt.dim_attention_unit
         self.len_attention_memory = opt.batch_size
         self.num_attention_groups = opt.num_attention_groups
+        self.num_attention_splits = opt.num_attention_splits
 
         self.dim_inputs = 4 * (96 * 96 + 4)
 
@@ -47,6 +48,7 @@ class Model(nn.Module):
                                        dim_attention_global=opt.dim_attention_global,
                                        dim_attention_unit=opt.dim_attention_unit,
                                        num_attention_groups=opt.num_attention_groups,
+                                       num_attention_splits=opt.num_attention_splits,
                                        mask_p=opt.attention_mask_p)
 
         self.timestamp = datetime.now().strftime('%b%d_%H-%M-%S')
@@ -69,7 +71,8 @@ class Model(nn.Module):
         agg_outputs = torch.cat(agg_output_list, dim=1)
 
         mem_outputs, mem_attentions = self.last_enc_outputs, self.last_attentions
-        attentions, global_attention, weights, att_outputs = self.hippocampus(agg_outputs, (mem_attentions, mem_outputs))
+        attentions, global_attention, weights, att_outputs = self.hippocampus(agg_outputs,
+                                                                              (mem_attentions, mem_outputs))
         att_output_list = list(torch.split(att_outputs, self.num_units_regions, dim=1))
 
         if not self.blinded:
@@ -126,5 +129,6 @@ class Model(nn.Module):
         return '{timestamp}_model__unit_n{num_units}_d{dim_unit}_' \
                '@d{dim_attention_global}_@unit_d{dim_attention_unit}_' \
                '@mem{len_attention_memory}_@groups{num_attention_groups}_' \
+               '@s{num_attention_splits}_' \
                'mix{mix_mode}_{data_file}' \
             .format(**self.__dict__)
