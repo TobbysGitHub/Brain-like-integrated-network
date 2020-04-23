@@ -37,7 +37,6 @@ class TrainState:
 
         elif self.epoch - self.best_epoch > 5:
             self.early_stop = True
-            tb.writer.add_text('loss', str(self.best_loss))
 
 
 def save(state):
@@ -174,6 +173,7 @@ def main():
 
     save(state)
     train(gen_net, model, optim, train_data_loader, eval_data_loader, opt, state)
+    tb.writer.add_text('loss', str(state.best_loss))
 
     if IMAGE:
         with torch.no_grad():
