@@ -13,6 +13,7 @@ from tensor_board import tb
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+IMAGE = False
 
 class State:
     def __init__(self, save_dir):
@@ -66,6 +67,9 @@ def predict(gen_net, opt, model, model_opt, state):
 
     for i, loss in enumerate(losses):
         tb.writer.add_scalar('ploss', loss, i)
+
+    if not IMAGE:
+        return
 
     imgs = []
     imgs_gen = []

@@ -20,12 +20,12 @@ class Hippocampus(nn.Module):
         self.num_attention_splits = num_attention_splits
         self.mask_p = mask_p
 
-        self.linear1 = nn.Linear(in_features=self.dim_inputs, out_features=dim_attention_global)
+        # self.linear1 = nn.Linear(in_features=self.dim_inputs, out_features=dim_attention_global)
         self.linear1 = UnitWiseLinear(num_units=num_attention_splits,
                                       in_features=self.dim_inputs // num_attention_splits,
                                       out_features=self.dim_attention_global // num_attention_splits)
-        self.linear2 = nn.Linear(in_features=dim_attention_global,
-                                 out_features=self.num_units * self.dim_attention_unit)
+        # self.linear2 = nn.Linear(in_features=dim_attention_global,
+        #                          out_features=self.num_units * self.dim_attention_unit)
         self.linear2 = UnitWiseLinear(num_units=num_attention_splits,
                                       in_features=dim_attention_global // num_attention_splits,
                                       out_features=self.num_units * self.dim_attention_unit // num_attention_splits)

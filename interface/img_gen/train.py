@@ -15,6 +15,7 @@ from tensor_board import tb
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+IMAGE = False
 
 class TrainState:
     def __init__(self, steps, gen_net, save_dir):
@@ -174,9 +175,10 @@ def main():
     save(state)
     train(gen_net, model, optim, train_data_loader, eval_data_loader, opt, state)
 
-    with torch.no_grad():
-        gen_net.load_state_dict(torch.load(state.state_dict, map_location=device))
-        visualize(gen_net, model, opt=opt, model_opt=model_opt, dir=save_dir)
+    if IMAGE:
+        with torch.no_grad():
+            gen_net.load_state_dict(torch.load(state.state_dict, map_location=device))
+            visualize(gen_net, model, opt=opt, model_opt=model_opt, dir=save_dir)
 
     return opt.mode
 

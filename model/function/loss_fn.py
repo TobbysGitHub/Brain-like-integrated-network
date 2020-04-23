@@ -23,25 +23,26 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     enc_enc_thetas = theta(enc_outputs.unsqueeze(0),
                            enc_outputs.unsqueeze(1))  # batch_size * batch_size * n_units
     enc_agg_thetas = theta(enc_outputs, agg_outputs)  # batch_size * n_units
-    enc_att_thetas = theta(enc_outputs, att_outputs)  # batch_size * n_units
-    agg_negs_thetas = theta(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    # enc_att_thetas = theta(enc_outputs, att_outputs)  # batch_size * n_units
+    # agg_negs_thetas = theta(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
 
-    tb.histogram(enc_enc_thetas=enc_enc_thetas,
-                 enc_agg_thetas=enc_agg_thetas,
-                 enc_att_thetas=enc_att_thetas,
-                 agg_negs_thetas=agg_negs_thetas,
+    tb.histogram(
+        # enc_enc_thetas=enc_enc_thetas,
+        #          enc_agg_thetas=enc_agg_thetas,
+        #          enc_att_thetas=enc_att_thetas,
+        #          agg_negs_thetas=agg_negs_thetas,
                  weights_max=None if weights is None else weights.max(1)[0])
 
-    agg_neg_thetas = agg_negs_thetas.mean(1)
-    agg_neg_w_thetas = (agg_negs_thetas * weights).sum(1)
+    # agg_neg_thetas = agg_negs_thetas.mean(1)
+    # agg_neg_w_thetas = (agg_negs_thetas * weights).sum(1)
 
     pre_train_loss = torch.mean(enc_agg_thetas - enc_enc_thetas)
-    weight_loss = torch.mean(enc_agg_thetas - agg_neg_w_thetas)
-    background_loss = torch.mean(enc_agg_thetas - agg_neg_thetas)
+    # weight_loss = torch.mean(enc_agg_thetas - agg_neg_w_thetas)
+    # background_loss = torch.mean(enc_agg_thetas - agg_neg_thetas)
 
-    tb.add_scalar(
-        background_loss=background_loss,
-        weight_loss=weight_loss)
+    # tb.add_scalar(
+    #     background_loss=background_loss,
+    #     weight_loss=weight_loss)
 
     def f(x1, x2):
         return torch.exp(cosine_similarity(x1, x2, dim=-1))
@@ -55,8 +56,8 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     weight_loss = -torch.mean(torch.log(enc_agg_f / agg_neg_w_f))
     background_loss = -torch.mean(torch.log(enc_agg_f / agg_neg_f))
     tb.add_scalar(
-        size_agg=torch.mean(torch.abs(agg_outputs)),
-        size_enc=torch.mean(torch.abs(enc_outputs)),
+        # size_agg=torch.mean(torch.abs(agg_outputs)),
+        # size_enc=torch.mean(torch.abs(enc_outputs)),
         background_loss_f=background_loss,
         weight_loss_f=weight_loss)
 
