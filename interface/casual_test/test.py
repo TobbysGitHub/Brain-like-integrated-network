@@ -59,7 +59,7 @@ def predict(gen_net, opt, model, model_opt, state):
                 img = inputs[:, -96 * 96:].view_as(img_gen)
                 loss = F.mse_loss(img_gen, img).item()
                 loss_frames.append(loss)
-            if n == 40:
+            if n == 60:
                 model.blinded = False
                 break
         loss_batches.append(loss_frames)

@@ -20,6 +20,8 @@ class Hippocampus(nn.Module):
         self.num_attention_splits = num_attention_splits
         self.mask_p = mask_p
 
+        assert self.num_units % num_attention_splits == 0
+        assert self.dim_attention_global % num_attention_splits == 0
         # self.linear1 = nn.Linear(in_features=self.dim_inputs, out_features=dim_attention_global)
         self.linear1 = UnitWiseLinear(num_units=num_attention_splits,
                                       in_features=self.dim_inputs // num_attention_splits,

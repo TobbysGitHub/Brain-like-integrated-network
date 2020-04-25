@@ -67,6 +67,8 @@ class Model(nn.Module):
         if self.warm_up(inputs):
             return None
 
+        inputs = inputs + 0.2 * torch.randn_like(inputs)
+
         agg_output_list = self.aggregator(self.caches[-self.t_intro_region], self.caches[-self.t_inter_region])
         agg_outputs = torch.cat(agg_output_list, dim=1)
 
