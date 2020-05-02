@@ -3,8 +3,7 @@ import torch
 from torch import nn
 from model.modules.components.unit_wise_linear import UnitWiseLinear
 
-from model.modules.components.random_mask import RandomMask
-
+from torch.nn.functional import cosine_similarity
 
 class Hippocampus(nn.Module):
     def __init__(self, num_units_regions, dim_inputs, dim_attention_global, dim_attention_unit, num_attention_groups,
@@ -72,7 +71,7 @@ class Hippocampus(nn.Module):
         mem_attention, mem_outputs = memories  # s_b * num_units(mem_capacity) s_b * num_units(mem_capacity) * d
         mem_outputs = mem_outputs.detach()
 
-        weights = (attentions.unsqueeze(1) * mem_attention).sum(-1)  # s_b * s_b * num_units
+        weights = cosine_similarity(attentions.unsqueeze(1), mem_attention, dim=-1)  # s_b * s_b * num_units
         weights = weights * self.temperature
 
         weights = self.random_mask(weights)
