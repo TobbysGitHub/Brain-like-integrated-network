@@ -26,7 +26,7 @@ class EncoderRegion(nn.Module):
         :param x: s_b * d_input
         """
         x = x.view(-1, 1, self.dim_inputs) \
-            .expand(-1, self.num_units, -1)  # s_b * n_u * d_input
+            .expand(-1, self.num_units, -1).clone()  # s_b * n_u * d_input
 
         x = self.model(x)
 

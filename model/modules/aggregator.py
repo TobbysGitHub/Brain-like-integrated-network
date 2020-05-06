@@ -29,7 +29,7 @@ class AggregatorRegion(nn.Module):
         """
 
         x = x.view(-1, 1, self.dim_inputs)
-        x = x.expand(-1, self.num_units, -1)
+        x = x.expand(-1, self.num_units, -1).clone()
         x = self.model(x)
 
         return x

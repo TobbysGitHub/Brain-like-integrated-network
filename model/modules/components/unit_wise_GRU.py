@@ -34,7 +34,7 @@ class UnitWiseGRU(nn.Module):
         :param x: s_b * num_units * d_input
         """
         if self.hidden is None:
-            self.hidden = self.hidden_init.expand(x.shape[0], -1, -1)
+            self.hidden = self.hidden_init.expand(x.shape[0], -1, -1).clone()
 
         r = torch.sigmoid(self.ir(x) + self.hr(self.hidden))
         z = torch.sigmoid(self.iz(x) + self.hz(self.hidden))
