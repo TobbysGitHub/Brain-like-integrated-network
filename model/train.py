@@ -66,10 +66,10 @@ def save(model, steps):
         os.remove(f_old)
 
 
-def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights):
+def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights, temperature):
     cortex_loss, background_loss, pre_train_loss = contrastive_loss(enc_outputs, agg_outputs, att_outputs,
                                                                     mem_outputs,
-                                                                    weights)
+                                                                    weights, temperature)
     for opti in optimizers:
         opti.zero_grad()
     #
@@ -86,6 +86,7 @@ def optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, wei
         background_loss.backward(retain_graph=True)
     optimizers[0].step()
     optimizers[1].step()
+    optimizers[3].step()
     # hippocampus_loss = - cortex_loss
     # hippocampus_loss.backward(retain_graph=True)
     flip_grad(optimizers[2])
@@ -107,7 +108,7 @@ def train_batch(batch, model, optimizers, state):
             continue
 
         (enc_outputs, agg_outputs, att_outputs, mem_outputs), attention, weights, global_attention = results
-        loss = optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights)
+        loss = optimize(optimizers, enc_outputs, agg_outputs, att_outputs, mem_outputs, weights, model.temperature)
         sum_loss += loss.item()
         counter += 1
 
@@ -145,6 +146,7 @@ def main():
         optimizers = [optim.Adam(model.encoder.parameters(), lr=1e-4),
                       optim.Adam(model.aggregator.parameters(), lr=1e-3),
                       optim.Adam(model.hippocampus.parameters(), lr=1e-3),
+                      optim.Adam([model.temperature], lr=1e-3)
                       ]
 
         file = opt.data_file + '.train'

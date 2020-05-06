@@ -51,6 +51,8 @@ class Model(nn.Module):
                                        num_attention_splits=opt.num_attention_splits,
                                        mask_p=opt.attention_mask_p)
 
+        self.temperature = nn.Parameter(torch.ones(sum(self.num_units_regions)))
+
         self.timestamp = datetime.now().strftime('%b%d_%H-%M-%S')
         self.num_units = '_'.join([str(n) for n in self.num_units_regions])
         self.data_file = opt.data_file

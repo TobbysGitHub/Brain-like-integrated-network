@@ -4,13 +4,15 @@ from torch.nn.functional import cosine_similarity
 from tensor_board import tb
 
 
-def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
+def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights, temperature):
     """
+    :param temperature:
     :param enc_outputs: batch_size * n_units * d, encode_outputs
     :param agg_outputs: batch_size * n_units * d, agg_outputs
     :param att_outputs: batch_size * n_units * d, att_outputs
     :param negatives: n_neg * n_units * d, memories of encode_outputs
     :param weights: batch_size * n_neg * n_units
+    :param temperature: n_units
     """
 
     def theta(x1, x2):
@@ -45,7 +47,7 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights):
     #     weight_loss=weight_loss)
 
     def f(x1, x2):
-        return torch.exp(cosine_similarity(x1, x2, dim=-1))
+        return torch.exp(cosine_similarity(x1, x2, dim=-1) * temperature)
 
     enc_agg_f = f(enc_outputs, agg_outputs)  # batch_size * n_units
     agg_negs_f = f(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
