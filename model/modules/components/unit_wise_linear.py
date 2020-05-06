@@ -27,7 +27,7 @@ class UnitWiseLinear(nn.Module):
         x = torch.matmul(self.w, x.unsqueeze(-1)).squeeze(-1)
 
         if self.bias:
-            x += self.b
+            x = x + self.b
 
         return x
 

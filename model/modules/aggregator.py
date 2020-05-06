@@ -16,7 +16,7 @@ class AggregatorRegion(nn.Module):
         self.dim_outputs = num_units * dim_unit
         self.max_bptt = max_bptt
         self.model = nn.Sequential(
-            nn.LayerNorm(self.dim_inputs),
+            # nn.LayerNorm(self.dim_inputs),
             UnitWiseLinear(num_units, self.dim_inputs, self.dim_hidden),
             UnitWiseGRU(num_units, self.dim_hidden, self.dim_hidden, self.max_bptt),
             UnitWiseLinear(num_units, self.dim_hidden, self.dim_unit)

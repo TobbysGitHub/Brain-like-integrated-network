@@ -35,11 +35,11 @@ class Hippocampus(nn.Module):
             if self.mask_p <= 0:
                 return x
             mask = torch.rand_like(x, device=x.device) < self.mask_p
-            return x.masked_fill_(mask, -np.inf)
+            return x.masked_fill(mask, -np.inf)
 
         def eye_mask_fn(x: torch.Tensor):
             mask = torch.eye(x.shape[0], device=x.device) == 1
-            return x.masked_fill_(mask.unsqueeze(-1), -np.inf)
+            return x.masked_fill(mask.unsqueeze(-1), -np.inf)
 
         self.random_mask = random_mask_fn
         self.eye_mask = eye_mask_fn
