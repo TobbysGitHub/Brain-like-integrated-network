@@ -1,5 +1,4 @@
 import torch
-from torchvision import utils
 import torch.nn.functional as F
 import numpy as np
 from tqdm import tqdm
@@ -71,6 +70,7 @@ def predict(gen_net, opt, model, model_opt, state):
     if not IMAGE:
         return
 
+    from torchvision import utils
     imgs = []
     imgs_gen = []
     for batch in data_loader:
