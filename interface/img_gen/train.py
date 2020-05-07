@@ -1,7 +1,6 @@
 import os
 
 import torch
-import torchvision.utils as utils
 import torch.nn.functional as F
 import numpy as np
 
@@ -105,6 +104,8 @@ def train(gen_net, model, optim, train_data_loader, eval_data_loader, opt, state
 
 
 def visualize(gen_net, model, opt, model_opt, dir, nrow=8, displays=32):
+    import torchvision.utils as utils
+
     file = model_opt.data_file + '.eval'
     data_loader = prepare_data_loader(batch_size=model_opt.batch_size, file=file,
                                       early_cuda=model_opt.early_cuda,
