@@ -50,13 +50,13 @@ def contrastive_loss(enc_outputs, agg_outputs, att_outputs, negatives, weights, 
         return torch.exp(cosine_similarity(x1, x2, dim=-1) * temperature)
 
     enc_agg_f = f(enc_outputs, agg_outputs)  # batch_size * n_units
-    agg_negs_f = f(agg_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
+    enc_negs_f = f(enc_outputs.unsqueeze(1), negatives)  # batch_size * n_neg * n_units
 
-    agg_neg_f = agg_negs_f.mean(1)
-    agg_neg_w_f = (agg_negs_f * weights).sum(1)
+    enc_neg_f = enc_negs_f.mean(1)
+    enc_neg_w_f = (enc_negs_f * weights).sum(1)
 
-    weight_loss = -torch.mean(torch.log(enc_agg_f / agg_neg_w_f))
-    background_loss = -torch.mean(torch.log(enc_agg_f / agg_neg_f))
+    weight_loss = -torch.mean(torch.log(enc_agg_f / enc_neg_w_f))
+    background_loss = -torch.mean(torch.log(enc_agg_f / enc_neg_f))
     tb.add_scalar(
         # size_agg=torch.mean(torch.abs(agg_outputs)),
         # size_enc=torch.mean(torch.abs(enc_outputs)),
